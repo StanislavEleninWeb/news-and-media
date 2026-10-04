@@ -1,9 +1,19 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import * as webpush from 'web-push';
+import * as webpushModule from 'web-push';
 import { getConfig, type AppConfig } from '@nm/core/config';
 import type { Db } from '@nm/db';
 import { pushSubscriptions } from '@nm/db/schema';
 import { isDeliveryAllowed } from '../mail/mailer';
+
+// web-push is CommonJS: under native ESM (tsx, node) its functions live only on
+// `default`, while bundlers also expose them as named exports. Accept both.
+const webpush: typeof webpushModule =
+  (webpushModule as { default?: typeof webpushModule }).default ?? webpushModule;
+
+/** A new VAPID key pair (one per environment). */
+export function generateVapidKeys(): { publicKey: string; privateKey: string } {
+  return webpush.generateVAPIDKeys();
+}
 
 export interface PushPayload {
   title: string;

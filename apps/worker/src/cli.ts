@@ -13,8 +13,11 @@ import { upsertStaffUser } from '@nm/services/auth/accounts';
 import { createProcessDeps, processArticles, requeueArticles } from '@nm/services/ai/process';
 import { createIngestDeps, ingestSource, runIngestion } from '@nm/services/ingestion/ingest';
 import { sendDigest } from '@nm/services/notifications/fanout';
-import { createWebPushSender, pushToUser } from '@nm/services/notifications/push';
-import { generateVAPIDKeys } from 'web-push';
+import {
+  createWebPushSender,
+  generateVapidKeys,
+  pushToUser,
+} from '@nm/services/notifications/push';
 import { users } from '@nm/db/schema';
 import { sql } from 'drizzle-orm';
 import { createSearchBackend, createTypesense } from '@nm/services/search/search';
@@ -131,7 +134,7 @@ const commands: Record<string, Command> = {
   'generate-vapid-keys': {
     describe: 'Print a new VAPID key pair for Web Push (put them in .env once per environment)',
     run: async () => {
-      const keys = generateVAPIDKeys();
+      const keys = generateVapidKeys();
       console.log(`VAPID_PUBLIC_KEY=${keys.publicKey}\nVAPID_PRIVATE_KEY=${keys.privateKey}`);
     },
   },
