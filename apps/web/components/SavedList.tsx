@@ -14,11 +14,37 @@ export function SavedList({ locale }: { locale: Locale }) {
   const viewer = useViewer();
   const [items, setItems] = useState<Card[] | null>(null);
 
+  const offlineKey = `nm_saved_${locale}`;
   useEffect(() => {
+    // Offline: show the last list we fetched (the article pages themselves are cached by the service worker).
+    if (!navigator.onLine) {
+      try {
+        setItems(JSON.parse(localStorage.getItem(offlineKey) ?? 'null'));
+      } catch {
+        setItems([]);
+      }
+      return;
+    }
     if (viewer.status !== 'signed-in') return;
-    void api<{ items: Card[] }>(`/api/v1/me/saved?locale=${locale}`).then((r) => setItems(r.items));
-  }, [viewer.status, locale]);
+    void api<{ items: Card[] }>(`/api/v1/me/saved?locale=${locale}`).then((r) => {
+      setItems(r.items);
+      try {
+        localStorage.setItem(offlineKey, JSON.stringify(r.items));
+      } catch {
+        // storage full or disabled
+      }
+    });
+  }, [viewer.status, locale, offlineKey]);
 
+  if (items && items.length && viewer.status !== 'signed-in') {
+    return (
+      <div className="story-grid">
+        {items.map((card) => (
+          <ArticleCard key={card.id} card={card} locale={locale} showImage={false} />
+        ))}
+      </div>
+    );
+  }
   if (viewer.status === 'loading') return <p className="empty">{t.loading}</p>;
   if (viewer.status === 'anonymous') {
     return (

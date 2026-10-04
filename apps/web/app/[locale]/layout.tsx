@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 import '@/styles/globals.css';
+import { ServiceWorkerRegistration } from '@/components/PwaSupport';
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome';
 import { ViewerProvider } from '@/components/ViewerProvider';
 import { isLocale } from '@/i18n/config';
@@ -29,6 +30,7 @@ export async function generateMetadata({
     description: getMessages(locale).siteTagline,
     alternates: { languages: { bg: '/bg', en: '/en' } },
     openGraph: { siteName: name, locale: locale === 'bg' ? 'bg_BG' : 'en_GB', type: 'website' },
+    appleWebApp: { capable: true, title: name, statusBarStyle: 'default' },
   };
 }
 
@@ -67,6 +69,7 @@ export default async function LocaleLayout({
           <main id="content">{children}</main>
           <SiteFooter locale={locale} siteName={name} />
         </ViewerProvider>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

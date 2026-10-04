@@ -3,6 +3,7 @@ import type { Locale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
 import { formatDate } from '@/lib/format';
 import { HeaderActions, TopicNav } from './HeaderClient';
+import { InstallButton } from './PwaSupport';
 
 export function SiteHeader({
   locale,
@@ -58,6 +59,9 @@ export function SiteFooter({ locale, siteName }: { locale: Locale; siteName: str
           <p style={{ marginTop: '0.5rem' }}>
             © {new Date().getFullYear()} {siteName}. {t.footer.rights}
           </p>
+          <div style={{ marginTop: '0.75rem' }}>
+            <InstallButton locale={locale} />
+          </div>
         </div>
       </div>
     </footer>

@@ -129,3 +129,17 @@ simple PostgreSQL search, which is enough for local development.
   stored in the browser and applied by a tiny inline script before first paint (no flash, and pages
   stay identical for everyone so they remain cacheable). Lite mode switches on automatically on
   data-saver/2G connections.
+
+## PWA & offline
+
+The site is an installable Progressive Web App (manifest, maskable icons, install button where the
+browser offers it) — the MVP's stand-in for native apps. `public/sw.js`:
+
+* pages: network first with a 4-second timeout, then the cached copy, then `/offline.html`;
+* articles the reader **saves** are cached in a separate store that is never evicted, so they open
+  offline; un-saving removes the copy; the reading list itself is remembered for offline display;
+* hashed Next.js assets and icons: cache first; images (`/media`): cache first, bounded to 150;
+* `/api` and `/admin` are never cached.
+
+**Lite mode** hides photos entirely (they are never requested). It turns on automatically on
+data-saver or 2G connections and can be toggled in the "Aa" menu.
