@@ -46,6 +46,32 @@ export const envSchema = z
     /** Only for tests/local experiments: allows fetching private-network addresses. */
     ALLOW_PRIVATE_NETWORK_FETCH: booleanFromEnv.default('false'),
 
+    // AI rewrite & translation ----------------------------------------------
+    /** anthropic (default: Claude Haiku) or openai (any OpenAI-compatible API: DeepSeek, Groq, ...). */
+    LLM_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
+    LLM_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+    /** Optional second provider used when the primary one is down. */
+    LLM_FALLBACK_PROVIDER: z.enum(['anthropic', 'openai']).optional(),
+    ANTHROPIC_API_KEY: optionalString,
+    ANTHROPIC_BASE_URL: z.string().url().default('https://api.anthropic.com'),
+    OPENAI_COMPAT_BASE_URL: optionalString,
+    OPENAI_COMPAT_API_KEY: optionalString,
+    OPENAI_COMPAT_MODEL: optionalString,
+    /** USD per million tokens for the primary model (defaults: Claude Haiku 4.5). */
+    LLM_INPUT_PRICE_PER_MTOK: z.coerce.number().min(0).default(1),
+    LLM_OUTPUT_PRICE_PER_MTOK: z.coerce.number().min(0).default(5),
+    LLM_CACHE_READ_PRICE_PER_MTOK: z.coerce.number().min(0).default(0.1),
+    OPENAI_COMPAT_INPUT_PRICE_PER_MTOK: z.coerce.number().min(0).default(0),
+    OPENAI_COMPAT_OUTPUT_PRICE_PER_MTOK: z.coerce.number().min(0).default(0),
+    /** Spend guards. Defaults are generous in production and tiny everywhere else. */
+    LLM_MAX_ARTICLES_PER_RUN: z.coerce.number().int().min(0).optional(),
+    LLM_MONTHLY_BUDGET_USD: z.coerce.number().min(0).optional(),
+    /** Share of 8-word sequences a rewrite may reuse from its source before it goes to review. */
+    LLM_SIMILARITY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.2),
+    /** Optional: DeepL for translating flagship articles. Free keys end in ":fx". */
+    DEEPL_API_KEY: optionalString,
+    DEEPL_API_URL: optionalString,
+
     // Media storage ---------------------------------------------------------
     STORAGE_LOCAL_DIR: z.string().default('./data/media'),
     MEDIA_BASE_URL: z.string().default('/media'),
@@ -56,6 +82,14 @@ export const envSchema = z
     INGEST_USER_AGENT:
       env.INGEST_USER_AGENT ??
       `${env.SITE_NAME.replace(/[^A-Za-z0-9]/g, '') || 'News'}Bot/1.0 (+${env.APP_URL.replace(/\/$/, '')}/bot)`,
+    LLM_MAX_ARTICLES_PER_RUN:
+      env.LLM_MAX_ARTICLES_PER_RUN ?? (env.APP_ENV === 'production' ? 50 : 5),
+    LLM_MONTHLY_BUDGET_USD: env.LLM_MONTHLY_BUDGET_USD ?? (env.APP_ENV === 'production' ? 50 : 5),
+    DEEPL_API_URL:
+      env.DEEPL_API_URL ??
+      (env.DEEPL_API_KEY?.endsWith(':fx')
+        ? 'https://api-free.deepl.com/v2'
+        : 'https://api.deepl.com/v2'),
     isProduction: env.APP_ENV === 'production',
   }))
   .superRefine((env, ctx) => {
