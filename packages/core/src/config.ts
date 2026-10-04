@@ -36,10 +36,26 @@ export const envSchema = z
     SCHEDULER_ENABLED: booleanFromEnv.optional(),
 
     DATABASE_URL: optionalString,
+
+    // Ingestion -------------------------------------------------------------
+    INGEST_USER_AGENT: optionalString,
+    INGEST_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
+    INGEST_TIMEOUT_MS: z.coerce.number().int().min(1000).default(15_000),
+    /** Minimum extracted article length (characters); shorter items are skipped. */
+    INGEST_MIN_TEXT_LENGTH: z.coerce.number().int().min(0).default(400),
+    /** Only for tests/local experiments: allows fetching private-network addresses. */
+    ALLOW_PRIVATE_NETWORK_FETCH: booleanFromEnv.default('false'),
+
+    // Media storage ---------------------------------------------------------
+    STORAGE_LOCAL_DIR: z.string().default('./data/media'),
+    MEDIA_BASE_URL: z.string().default('/media'),
   })
   .transform((env) => ({
     ...env,
     SCHEDULER_ENABLED: env.SCHEDULER_ENABLED ?? env.APP_ENV === 'production',
+    INGEST_USER_AGENT:
+      env.INGEST_USER_AGENT ??
+      `${env.SITE_NAME.replace(/[^A-Za-z0-9]/g, '') || 'News'}Bot/1.0 (+${env.APP_URL.replace(/\/$/, '')}/bot)`,
     isProduction: env.APP_ENV === 'production',
   }))
   .superRefine((env, ctx) => {
