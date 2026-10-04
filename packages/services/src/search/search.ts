@@ -107,7 +107,10 @@ export class TypesenseSearch implements SearchIndex, SearchBackend {
       sort_by: params.q.trim() ? '_text_match:desc,published_at:desc' : 'published_at:desc',
       facet_by: 'topics',
       highlight_fields: 'tldr,body',
-      num_typos: 1,
+      // Typesense measures typos in bytes, and a Cyrillic letter is two bytes in UTF-8, so
+      // fuzzy matching on Bulgarian text surfaces wrong hits rather than fixing typos.
+      // Bulgarian relies on exact and prefix matching; English keeps one-typo tolerance.
+      num_typos: params.locale === 'bg' ? 0 : 1,
       page,
       per_page: perPage,
     });

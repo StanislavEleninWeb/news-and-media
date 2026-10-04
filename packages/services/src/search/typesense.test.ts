@@ -130,6 +130,7 @@ describe('TypesenseSearch', () => {
     expect(query.get('filter_by')).toBe('locale:=`bg` && topics:=`tech`');
     expect(query.get('query_by')).toBe('title,tldr,body');
     expect(query.get('sort_by')).toBe('_text_match:desc,published_at:desc');
+    expect(query.get('num_typos')).toBe('0'); // byte-based typos misfire on Cyrillic
     expect(result.hits[0]).toMatchObject({
       articleId: 'a1',
       imageUrl: '/media/img/x-480.webp',
@@ -143,6 +144,7 @@ describe('TypesenseSearch', () => {
     await search().search({ q: '  ', locale: 'en' });
     const query = new URL(requests.at(-1)!.url, 'http://x').searchParams;
     expect(query.get('q')).toBe('*');
+    expect(query.get('num_typos')).toBe('1');
     expect(query.get('sort_by')).toBe('published_at:desc');
   });
 });
