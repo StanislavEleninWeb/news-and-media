@@ -112,6 +112,6 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
       - name: Upload stack definition
-        run: scp infra/compose/app.yml infra/deploy/deploy.sh "$VPS_USER@$VPS_HOST:/srv/newsmedia/$TARGET/"
+        run: scp infra/compose/app.yml infra/deploy/deploy.sh infra/scripts/backup.sh infra/scripts/restore.sh "$VPS_USER@$VPS_HOST:/srv/newsmedia/$TARGET/"
       - name: Deploy
         run: ssh "$VPS_USER@$VPS_HOST" "bash /srv/newsmedia/$TARGET/deploy.sh $TARGET $SHA"

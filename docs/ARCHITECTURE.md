@@ -205,3 +205,18 @@ creative arriving — or not — never shifts the content. Creatives load in the
   into the same placements.
 
 `/<locale>/privacy` explains the cookies in plain language — have it reviewed before launch.
+
+## Observability
+
+* Structured JSON logs from every service (`docker compose logs`), secrets redacted.
+* Error tracking: unhandled errors in pages, API routes, server actions (Next.js `onRequestError`),
+  scheduled tasks and jobs go to Sentry/GlitchTip when `SENTRY_DSN` is set, tagged by environment,
+  service and release (commit SHA) — dev noise never mixes with production. A ~100-line client speaks
+  the Sentry envelope protocol directly (no SDK), so nothing heavy is bundled.
+* Health: `/api/health` (database + search, used by deploys) and `/api/health/worker` (heartbeat
+  younger than 5 minutes) for external uptime monitors.
+* Alerts: pipeline checks every 10 minutes, throttled to one per kind per 6 hours, to a webhook and/or
+  e-mail.
+* Performance budget: a Lighthouse CI job (performance and accessibility ≥ 90, CLS ≤ 0.1) runs on
+  every pull request against a production build with sample content.
+* Security headers: CSP (production), HSTS (Caddy), `nosniff`, `DENY` framing, strict referrer policy.

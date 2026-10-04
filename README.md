@@ -6,7 +6,7 @@ Self-running news & media trends platform in Bulgarian and English, by SEWEB.
 
 Next.js 15 web app (site + API + admin) · Node worker · PostgreSQL · Typesense · Caddy ·
 Docker Compose on a VPS · GitHub Actions. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), API: [docs/API.md](docs/API.md),
-deployment: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+deployment: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), operations: [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ```
 apps/web       Next.js — public site, /api, /admin

@@ -23,6 +23,7 @@ export class Scheduler {
   constructor(
     private readonly logger: Logger,
     private readonly schedulerEnabled: boolean,
+    private readonly onError?: (task: string, error: unknown) => void,
   ) {}
 
   register(task: ScheduledTask): void {
@@ -37,6 +38,7 @@ export class Scheduler {
         .run(this.controller.signal)
         .catch((error: unknown) => {
           this.logger.error({ task: task.name, err: error }, 'scheduled task failed');
+          this.onError?.(task.name, error);
         })
         .finally(() => {
           this.running.delete(task.name);

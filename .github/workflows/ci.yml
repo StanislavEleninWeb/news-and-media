@@ -44,6 +44,47 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
+  lighthouse:
+    name: Lighthouse (performance budget)
+    needs: checks
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: newsmedia
+          POSTGRES_USER: newsmedia
+          POSTGRES_PASSWORD: newsmedia
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U newsmedia" --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      APP_ENV: development
+      APP_URL: http://localhost:3000
+      DATABASE_URL: postgres://newsmedia:newsmedia@localhost:5432/newsmedia
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Database with sample content
+        run: |
+          pnpm db:migrate
+          pnpm db:seed
+      - name: Build the standalone web app
+        run: |
+          pnpm --filter @nm/web build
+          cp -r apps/web/public apps/web/.next/standalone/apps/web/public
+          cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+      - name: Lighthouse CI
+        run: npx --yes @lhci/cli@0.15.1 autorun
+        env:
+          PORT: 3000
+
   docker:
     name: Docker build (${{ matrix.service }})
     needs: checks

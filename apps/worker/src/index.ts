@@ -1,10 +1,18 @@
-import { getConfig, getLogger } from '@nm/core';
+import {
+  flushErrorReporting,
+  getConfig,
+  getLogger,
+  initErrorReporting,
+  reportError,
+} from '@nm/core';
 import { closeDb, getDb } from '@nm/db';
 import { createProcessDeps, processArticles } from '@nm/services/ai/process';
 import { createIngestDeps, runIngestion } from '@nm/services/ingestion/ingest';
 import { runDueJobs, type JobHandlers } from '@nm/services/jobs/queue';
 import { scheduleDigests, sendDigest, sendUrgentPush } from '@nm/services/notifications/fanout';
 import { createWebPushSender } from '@nm/services/notifications/push';
+import { createAlertTransport, evaluatePipelineHealth, raiseAlert } from '@nm/services/ops/alerts';
+import { writeHeartbeat } from '@nm/services/ops/heartbeat';
 import { createTypesense } from '@nm/services/search/search';
 import { rebuildSearchIndex, syncSearchIndex } from '@nm/services/search/sync';
 import { Scheduler } from './scheduler';
@@ -12,8 +20,11 @@ import { Scheduler } from './scheduler';
 const config = getConfig();
 const logger = getLogger({ service: 'worker' });
 const db = getDb();
+await initErrorReporting('worker');
 
-const scheduler = new Scheduler(logger, config.SCHEDULER_ENABLED);
+const scheduler = new Scheduler(logger, config.SCHEDULER_ENABLED, (task, error) =>
+  reportError(error, { service: 'worker', task }),
+);
 const ingestDeps = createIngestDeps(db);
 
 // Each tick fetches only the sources whose next_fetch_at has passed, so the
@@ -119,6 +130,32 @@ scheduler.register({
   },
 });
 
+// Liveness: the web app's /api/health/worker reports 503 when this goes stale.
+scheduler.register({
+  name: 'heartbeat',
+  everyMs: 60_000,
+  automatic: false,
+  run: () =>
+    writeHeartbeat(db, {
+      version: process.env.GIT_SHA ?? 'dev',
+      env: config.APP_ENV,
+      tasks: scheduler.taskNames,
+    }),
+});
+
+// Operational alerts (failed ingestion, no new articles, LLM budget, stuck AI queue).
+const alertTransport = createAlertTransport();
+scheduler.register({
+  name: 'health-checks',
+  everyMs: 10 * 60_000,
+  automatic: true,
+  run: async () => {
+    for (const alert of await evaluatePipelineHealth(db)) {
+      if (await raiseAlert(db, alertTransport, alert)) logger.warn(alert, 'alert raised');
+    }
+  },
+});
+
 logger.info({ scheduler: config.SCHEDULER_ENABLED, tasks: scheduler.taskNames }, 'worker started');
 
 let shuttingDown = false;
@@ -127,6 +164,7 @@ async function shutdown(signal: string) {
   shuttingDown = true;
   logger.info({ signal }, 'shutting down');
   await scheduler.stop();
+  await flushErrorReporting();
   await closeDb();
   process.exit(0);
 }

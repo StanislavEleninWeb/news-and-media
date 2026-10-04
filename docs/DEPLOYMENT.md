@@ -106,3 +106,15 @@ each environment's `.env`. Without them the Google button is hidden.
 
 Any SMTP provider works (`SMTP_URL=smtps://user:pass@host:465`). Outside production, mail and push go
 **only** to addresses in `NOTIFY_ALLOWLIST`; locally everything lands in Mailpit (http://localhost:8025).
+
+### 7. Monitoring, alerts, backups
+
+* **Uptime:** point an external monitor (UptimeRobot, Better Stack, or Uptime Kuma on another
+  machine) at `https://<domain>/api/health` and `https://<domain>/api/health/worker`.
+* **Alerts:** set `ALERT_WEBHOOK_URL` (Slack/Discord/Mattermost incoming webhook) and/or `ALERT_EMAIL`.
+  The worker checks every 10 minutes for failed ingestion, a day without new articles, the LLM budget
+  and a stuck AI queue (production schedule).
+* **Errors:** optional `SENTRY_DSN` — Sentry's free tier, or self-hosted GlitchTip (same SDK).
+* **Backups:** add the `backup.sh` cron line from [RUNBOOK.md](RUNBOOK.md#backups-and-restore).
+
+See [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) before the first public release.
