@@ -1,0 +1,68 @@
+# Local development services.
+#   docker compose -f infra/compose/dev.yml up -d            # postgres, typesense, mailpit, worker
+#   docker compose -f infra/compose/dev.yml --profile web up # + the web app in a container
+# Most of the time run the apps with `pnpm dev` for hot reload and keep only the services here.
+name: newsmedia-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: newsmedia
+      POSTGRES_USER: newsmedia
+      POSTGRES_PASSWORD: newsmedia
+    ports: ['5432:5432']
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U newsmedia -d newsmedia']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  typesense:
+    image: typesense/typesense:27.1
+    command: ['--data-dir', '/data', '--api-key', 'dev-typesense-key', '--enable-cors']
+    ports: ['8108:8108']
+    volumes: [typesense:/data]
+
+  # Catches every email sent in development: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports: ['1025:1025', '8025:8025']
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/worker/Dockerfile
+    env_file: [../../.env]
+    environment:
+      DATABASE_URL: postgres://newsmedia:newsmedia@postgres:5432/newsmedia
+      TYPESENSE_URL: http://typesense:8108
+      SMTP_URL: smtp://mailpit:1025
+      STORAGE_LOCAL_DIR: /data/media
+      # Dev never runs schedules automatically; trigger work from the admin or the CLI.
+      SCHEDULER_ENABLED: 'false'
+    volumes: [media:/data/media]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  web:
+    profiles: [web]
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+    env_file: [../../.env]
+    environment:
+      DATABASE_URL: postgres://newsmedia:newsmedia@postgres:5432/newsmedia
+      TYPESENSE_URL: http://typesense:8108
+      SMTP_URL: smtp://mailpit:1025
+      STORAGE_LOCAL_DIR: /data/media
+    ports: ['3000:3000']
+    volumes: [media:/data/media]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+volumes:
+  postgres:
+  typesense:
+  media:

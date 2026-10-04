@@ -1,0 +1,44 @@
+{
+	email {$ACME_EMAIL}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+{$PROD_DOMAIN} {
+	import common
+	handle_path /media/* {
+		root * /srv/media/production
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+	handle {
+		reverse_proxy newsmedia-production-web:3000
+	}
+}
+
+www.{$PROD_DOMAIN} {
+	redir https://{$PROD_DOMAIN}{uri} permanent
+}
+
+{$STAGING_DOMAIN} {
+	import common
+	header X-Robots-Tag "noindex, nofollow"
+	basic_auth {
+		import /etc/caddy/staging_users.caddy
+	}
+	handle_path /media/* {
+		root * /srv/media/staging
+		file_server
+	}
+	handle {
+		reverse_proxy newsmedia-staging-web:3000
+	}
+}

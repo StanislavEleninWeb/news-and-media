@@ -1,0 +1,4 @@
+# Copy to staging_users.caddy on the VPS. One "<user> <bcrypt hash>" per line.
+# Create a hash with:
+#   docker run --rm caddy:2-alpine caddy hash-password --plaintext 'choose-a-password'
+preview $2a$14$REPLACE_WITH_HASH

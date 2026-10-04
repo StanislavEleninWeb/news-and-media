@@ -1,0 +1,65 @@
+# Staging / production stack on the VPS. One copy per environment lives in
+# /srv/newsmedia/<environment>/ next to its own .env, and is run by deploy.sh as
+#   docker compose --project-name newsmedia-<environment> --env-file .env -f app.yml ...
+# Environments are fully isolated: separate database, search index, media and secrets.
+# Public traffic reaches `web` through the shared Caddy edge proxy (infra/edge).
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: ['${DATA_DIR}/postgres:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  typesense:
+    image: typesense/typesense:27.1
+    restart: unless-stopped
+    command: ['--data-dir', '/data', '--api-key', '${TYPESENSE_API_KEY}']
+    volumes: ['${DATA_DIR}/typesense:/data']
+    networks: [internal]
+
+  # One-shot: applies pending migrations. `docker compose run --rm migrate`
+  migrate:
+    image: ${IMAGE_PREFIX}-worker:${IMAGE_TAG}
+    profiles: [tools]
+    command: ['node', 'dist/migrate.js']
+    env_file: [.env]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+
+  web:
+    image: ${IMAGE_PREFIX}-web:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file: [.env]
+    volumes: ['${DATA_DIR}/media:/data/media']
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks:
+      internal: {}
+      edge:
+        aliases: ['newsmedia-${APP_ENV}-web']
+
+  worker:
+    image: ${IMAGE_PREFIX}-worker:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file: [.env]
+    volumes: ['${DATA_DIR}/media:/data/media']
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+
+networks:
+  internal: {}
+  edge:
+    external: true
+    name: edge

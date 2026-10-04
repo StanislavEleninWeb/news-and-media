@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1.7
+# Background worker: ingestion, AI rewrite/translate, search sync, notifications.
+# The same image runs database migrations (`node dist/migrate.js`) and the operator CLI.
+
+FROM node:22-alpine AS base
+RUN npm install -g pnpm@10.34.6
+WORKDIR /repo
+
+FROM base AS deps
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
+COPY apps/worker/package.json apps/worker/
+COPY packages/ packages/
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter "@nm/worker..."
+
+FROM deps AS build
+COPY . .
+RUN pnpm --filter @nm/worker build
+
+FROM node:22-alpine AS runtime
+ARG GIT_SHA=dev
+ENV NODE_ENV=production GIT_SHA=${GIT_SHA}
+WORKDIR /app
+RUN echo '{"type":"module","private":true}' > package.json
+COPY --from=build --chown=node:node /repo/apps/worker/dist ./dist
+USER node
+CMD ["node", "dist/index.js"]
