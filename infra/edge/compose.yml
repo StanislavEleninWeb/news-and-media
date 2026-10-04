@@ -1,0 +1,30 @@
+# Shared HTTPS edge for every environment on the VPS (Caddy, automatic Let's Encrypt).
+# Lives in /srv/newsmedia/edge/ with its own .env (see edge.env.example).
+#   docker network create edge   # once
+#   docker compose --env-file .env -f compose.yml up -d
+name: newsmedia-edge
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ['80:80', '443:443', '443:443/udp']
+    env_file: [.env]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./staging_users.caddy:/etc/caddy/staging_users.caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      # Media files are served straight from disk, never through Node.
+      - /srv/newsmedia/production/data/media:/srv/media/production:ro
+      - /srv/newsmedia/staging/data/media:/srv/media/staging:ro
+    networks: [edge]
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+    external: true
+    name: edge
