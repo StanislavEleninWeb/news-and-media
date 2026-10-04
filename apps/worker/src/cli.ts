@@ -11,6 +11,14 @@ import { seedDevelopment, seedTopics } from '@nm/db/seed';
 import { monthToDateSpend } from '@nm/services/ai/budget';
 import { createProcessDeps, processArticles, requeueArticles } from '@nm/services/ai/process';
 import { createIngestDeps, ingestSource, runIngestion } from '@nm/services/ingestion/ingest';
+import { createSearchBackend, createTypesense } from '@nm/services/search/search';
+import { rebuildSearchIndex, syncSearchIndex } from '@nm/services/search/sync';
+
+function requireTypesense() {
+  const index = createTypesense();
+  if (!index) throw new Error('TYPESENSE_URL / TYPESENSE_API_KEY are not set');
+  return index;
+}
 
 function flagValues(args: string[], flag: string): string[] {
   return args.flatMap((arg, i) => (arg === flag && args[i + 1] ? [args[i + 1]!] : []));
@@ -76,6 +84,31 @@ const commands: Record<string, Command> = {
       const spent = await monthToDateSpend(getDb());
       const budget = getConfig().LLM_MONTHLY_BUDGET_USD;
       console.log(`$${spent.toFixed(4)} of $${budget} (${((spent / budget) * 100).toFixed(1)}%)`);
+    },
+  },
+  'index-sync': {
+    describe: 'Push new/changed articles to Typesense now',
+    run: async () => {
+      console.log(await syncSearchIndex(getDb(), requireTypesense()));
+    },
+  },
+  reindex: {
+    describe: 'Drop and rebuild the Typesense collection from PostgreSQL',
+    run: async () => {
+      console.log(await rebuildSearchIndex(getDb(), requireTypesense()));
+    },
+  },
+  search: {
+    describe: 'Query the search backend: search <text> [--locale bg|en] [--topic slug]',
+    run: async (args) => {
+      const q = args
+        .filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'))
+        .join(' ');
+      const locale = flagValues(args, '--locale')[0] === 'en' ? 'en' : 'bg';
+      const backend = createSearchBackend(getDb());
+      const result = await backend.search({ q, locale, topic: flagValues(args, '--topic')[0] });
+      console.log(`${backend.kind}: ${result.found} found`);
+      for (const hit of result.hits) console.log(`- ${hit.publishedAt.slice(0, 10)}  ${hit.title}`);
     },
   },
   'add-source': {

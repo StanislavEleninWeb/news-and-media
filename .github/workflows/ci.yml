@@ -16,6 +16,14 @@ jobs:
   checks:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
+    services:
+      # Real search engine for src/search/typesense.integration.test.ts
+      typesense:
+        image: typesense/typesense:27.1
+        env:
+          TYPESENSE_DATA_DIR: /tmp
+          TYPESENSE_API_KEY: test-key
+        ports: ['8108:8108']
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -28,6 +36,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+        env:
+          TYPESENSE_TEST_URL: http://localhost:8108
+          TYPESENSE_TEST_API_KEY: test-key
       - name: Build
         run: pnpm build
         env:
