@@ -9,6 +9,7 @@ import { runMigrations } from '@nm/db/migrate';
 import { sources } from '@nm/db/schema';
 import { seedDevelopment, seedTopics } from '@nm/db/seed';
 import { monthToDateSpend } from '@nm/services/ai/budget';
+import { upsertStaffUser } from '@nm/services/auth/accounts';
 import { createProcessDeps, processArticles, requeueArticles } from '@nm/services/ai/process';
 import { createIngestDeps, ingestSource, runIngestion } from '@nm/services/ingestion/ingest';
 import { createSearchBackend, createTypesense } from '@nm/services/search/search';
@@ -109,6 +110,17 @@ const commands: Record<string, Command> = {
       const result = await backend.search({ q, locale, topic: flagValues(args, '--topic')[0] });
       console.log(`${backend.kind}: ${result.found} found`);
       for (const hit of result.hits) console.log(`- ${hit.publishedAt.slice(0, 10)}  ${hit.title}`);
+    },
+  },
+  'create-admin': {
+    describe: 'Create or promote a staff account: --email <e> --password <p> [--role editor|admin]',
+    run: async (args) => {
+      const [email] = flagValues(args, '--email');
+      const [password] = flagValues(args, '--password');
+      if (!email || !password) throw new Error('--email and --password are required');
+      const role = flagValues(args, '--role')[0] === 'editor' ? 'editor' : 'admin';
+      const user = await upsertStaffUser(getDb(), { email, password, role });
+      console.log(`${user.email} is now ${user.role}`);
     },
   },
   'add-source': {

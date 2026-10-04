@@ -79,6 +79,27 @@ export const envSchema = z
     /** Namespaces collections per environment, e.g. "staging_articles". Defaults to "<APP_ENV>_". */
     TYPESENSE_COLLECTION_PREFIX: optionalString,
 
+    // Accounts & e-mail -----------------------------------------------------
+    /** Optional "Sign in with Google". Redirect URI: <APP_URL>/api/v1/auth/google/callback */
+    GOOGLE_CLIENT_ID: optionalString,
+    GOOGLE_CLIENT_SECRET: optionalString,
+    /** smtp(s)://user:pass@host:port — any provider (Resend, Postmark, Brevo, own server). */
+    SMTP_URL: optionalString,
+    MAIL_FROM: optionalString,
+    /**
+     * Outside production, e-mail and push are delivered ONLY to these addresses
+     * (comma-separated), so nothing sent from dev/staging can reach real readers.
+     */
+    NOTIFY_ALLOWLIST: z
+      .string()
+      .optional()
+      .transform((value) =>
+        (value ?? '')
+          .split(',')
+          .map((item) => item.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+
     // Media storage ---------------------------------------------------------
     STORAGE_LOCAL_DIR: z.string().default('./data/media'),
     MEDIA_BASE_URL: z.string().default('/media'),
@@ -98,6 +119,7 @@ export const envSchema = z
         ? 'https://api-free.deepl.com/v2'
         : 'https://api.deepl.com/v2'),
     TYPESENSE_COLLECTION_PREFIX: env.TYPESENSE_COLLECTION_PREFIX ?? `${env.APP_ENV}_`,
+    MAIL_FROM: env.MAIL_FROM ?? `${env.SITE_NAME} <no-reply@${new URL(env.APP_URL).hostname}>`,
     isProduction: env.APP_ENV === 'production',
   }))
   .superRefine((env, ctx) => {

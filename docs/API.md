@@ -18,12 +18,25 @@ them. The API never calls an AI model at request time — it only reads PostgreS
 | GET | `/api/v1/me/saved?locale=` | session | Reading list |
 | PUT / DELETE | `/api/v1/me/saved/:id` | session | Add / remove from reading list |
 | GET | `/api/v1/ads?placement=&locale=` | – | One creative for an ad placement, or `null` |
+| POST | `/api/v1/auth/register` `{email, password, name?, locale?}` | – | Create account and sign in (password ≥ 10 chars) |
+| POST | `/api/v1/auth/login` `{email, password}` | – | Sign in (rate-limited per IP and per account) |
+| POST | `/api/v1/auth/logout` | session | Sign out |
+| POST | `/api/v1/auth/password-reset` `{email}` | – | E-mails a one-hour reset link; always 202 |
+| POST | `/api/v1/auth/password-reset/confirm` `{token, password}` | – | Set a new password; signs out all sessions |
+| GET | `/api/v1/auth/google?next=/bg` | – | Sign in with Google (code + PKCE); 404 unless configured |
+| GET | `/api/v1/me` | session | Current reader and followed topics/sources |
+| PUT | `/api/v1/me/preferences` `{topics?: slug[], sourceIds?: uuid[]}` | session | Replace followed topics/sources |
+| GET | `/api/v1/sources` | – | Outlets readers can follow |
 | GET | `/api/health` | – | 200 when database (and search, if configured) are reachable; 503 otherwise |
 
 Conventions:
 
 * `locale` is `bg` (default) or `en`. Article paths are `/<locale>/a/<id>/<slug>`.
 * Errors: `{"error": {"code": "...", "message": "..."}}` with 400/401/403/404/429.
+* Sessions: random 256-bit token in an `HttpOnly; SameSite=Lax` cookie (`Secure` on HTTPS), only its
+  SHA-256 stored server-side, 30-day lifetime. Passwords are hashed with scrypt.
+* Personalisation: a signed-in reader's feed lifts stories from followed topics and sources by 12 hours
+  of recency (`personalized: true`); urgent stories always stay on top.
 * State-changing requests must come from the site itself (Origin/Referer check) — CSRF protection
   for the cookie-based session. Anonymous reactions use a random `nm_aid` cookie.
 * Simple per-IP rate limits apply to search, reactions and view beacons.

@@ -84,3 +84,25 @@ chmod 600 /srv/newsmedia/*/.env
 * Put the matching public key in `/home/deploy/.ssh/authorized_keys`.
 * GHCR images are private by default: on the VPS run `docker login ghcr.io -u <github-user>` as
   `deploy` with a token that has only `read:packages`, or make both packages public.
+
+### 5. First admin account
+
+```bash
+cd /srv/newsmedia/production
+docker compose --project-name newsmedia-production --env-file .env -f app.yml \
+  run --rm worker node dist/cli.js create-admin --email you@seweb.co --password '<long password>'
+docker compose --project-name newsmedia-production --env-file .env -f app.yml \
+  run --rm worker node dist/cli.js seed-topics
+```
+
+### 6. Optional: Sign in with Google
+
+Create an OAuth client (Web application) in Google Cloud and add one redirect URI per environment:
+`http://localhost:3000/api/v1/auth/google/callback`, `https://<staging>/api/v1/auth/google/callback`,
+`https://<production>/api/v1/auth/google/callback`. Put `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in
+each environment's `.env`. Without them the Google button is hidden.
+
+### E-mail
+
+Any SMTP provider works (`SMTP_URL=smtps://user:pass@host:465`). Outside production, mail and push go
+**only** to addresses in `NOTIFY_ALLOWLIST`; locally everything lands in Mailpit (http://localhost:8025).
