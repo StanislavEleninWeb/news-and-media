@@ -8,17 +8,20 @@
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "@nm/core": "workspace:*",
     "@nm/db": "workspace:*",
     "@nm/services": "workspace:*",
+    "drizzle-orm": "0.45.3",
     "next": "15.5.27",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "zod": "3.25.76"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7"
   }

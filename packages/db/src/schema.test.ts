@@ -18,9 +18,11 @@ describe('migrations', () => {
     const result = await db.execute(
       sql`select table_name from information_schema.tables where table_schema = 'public'`,
     );
-    const names = (result as unknown as { rows: { table_name: string }[] }).rows.map(
-      (r) => r.table_name,
-    );
+    // postgres.js returns an array of rows, PGlite an object with `rows`.
+    const rows = (Array.isArray(result) ? result : (result as { rows: unknown[] }).rows) as {
+      table_name: string;
+    }[];
+    const names = rows.map((r) => r.table_name);
     for (const table of [
       'sources',
       'topics',
