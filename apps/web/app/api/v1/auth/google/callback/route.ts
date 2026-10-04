@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const config = getConfig();
   const url = new URL(request.url);
   const clearState = serializeCookie(GOOGLE_STATE_COOKIE, '', { maxAgeSeconds: 0 });
-  let saved: { state: string; verifier: string; next: string } | null = null;
+  let saved: { state: string; verifier: string; next: string } | null;
   try {
     saved = JSON.parse(readCookie(request, GOOGLE_STATE_COOKIE) ?? 'null');
   } catch {

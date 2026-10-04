@@ -1,0 +1,23 @@
+# Weekly dependency updates with a cooldown, grouped to keep PR noise low.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 5 }
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 5 }
+  - package-ecosystem: docker
+    directories: [/apps/web, /apps/worker]
+    schedule: { interval: weekly }
+    cooldown: { default-days: 5 }
+  - package-ecosystem: docker-compose
+    directories: [/infra/compose, /infra/edge]
+    schedule: { interval: weekly }
+    cooldown: { default-days: 5 }

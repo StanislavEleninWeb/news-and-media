@@ -88,7 +88,7 @@ export class RobotsCache {
     const cached = this.cache.get(url.origin);
     let rules = cached && cached.expires > Date.now() ? cached.rules : undefined;
     if (!rules) {
-      let text: string | null = null;
+      let text: string | null;
       try {
         text = await this.load(url.origin);
       } catch {

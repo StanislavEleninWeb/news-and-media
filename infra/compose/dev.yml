@@ -23,7 +23,7 @@ services:
       retries: 20
 
   typesense:
-    image: typesense/typesense:27.1
+    image: typesense/typesense:30.2
     command: ['--data-dir', '/data', '--api-key', 'dev-typesense-key', '--enable-cors']
     ports: ['8108:8108']
     volumes: [typesense:/data]

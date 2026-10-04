@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { assertPublicUrl, isPrivateAddress } from './safe-fetch';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import { assertPublicUrl, isPrivateAddress, safeFetch } from './safe-fetch';
 
 describe('isPrivateAddress', () => {
   it.each([
@@ -18,12 +20,32 @@ describe('isPrivateAddress', () => {
 });
 
 describe('assertPublicUrl', () => {
-  it('rejects internal hosts and non-http schemes', async () => {
-    await expect(assertPublicUrl('http://127.0.0.1:5432/')).rejects.toThrow(/private/);
-    await expect(assertPublicUrl('http://[::1]/')).rejects.toThrow(/private/);
-    await expect(assertPublicUrl('file:///etc/passwd')).rejects.toThrow(/protocol/);
+  it('rejects internal IP literals and non-http schemes', () => {
+    expect(() => assertPublicUrl('http://127.0.0.1:5432/')).toThrow(/private/);
+    expect(() => assertPublicUrl('http://[::1]/')).toThrow(/private/);
+    expect(() => assertPublicUrl('file:///etc/passwd')).toThrow(/protocol/);
   });
-  it('can be relaxed for tests', async () => {
-    await expect(assertPublicUrl('http://127.0.0.1:1/', true)).resolves.toBeInstanceOf(URL);
+  it('can be relaxed for tests', () => {
+    expect(assertPublicUrl('http://127.0.0.1:1/', true)).toBeInstanceOf(URL);
+  });
+});
+
+describe('safeFetch', () => {
+  it('refuses hostnames that resolve to internal addresses at connect time', async () => {
+    const server = createServer((_req, res) => res.end('internal secret'));
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as AddressInfo).port;
+    const options = { userAgent: 'test', timeoutMs: 5_000 };
+    try {
+      // "localhost" passes the literal-IP check but resolves to 127.0.0.1.
+      await expect(safeFetch(`http://localhost:${port}/`, options)).rejects.toThrow();
+      const allowed = await safeFetch(`http://localhost:${port}/`, {
+        ...options,
+        allowPrivateNetwork: true,
+      });
+      expect(allowed.body.toString()).toBe('internal secret');
+    } finally {
+      server.close();
+    }
   });
 });

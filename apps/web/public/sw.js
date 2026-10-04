@@ -120,7 +120,7 @@ self.addEventListener('message', (event) => {
 
 // Push notifications (breaking news, daily briefing) ---------------------------
 self.addEventListener('push', (event) => {
-  let data = {};
+  let data;
   try {
     data = event.data ? event.data.json() : {};
   } catch {

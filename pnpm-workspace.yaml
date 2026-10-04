@@ -5,3 +5,14 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - sharp
+
+# Patched PostCSS inside Next.js (CVE-2026-41305, -45623, -69153, -73646).
+# Patched esbuild for drizzle-kit's legacy loader (GHSA-67mh-4wv8-2f99, dev tool only).
+overrides:
+  postcss: '>=8.5.28'
+  '@esbuild-kit/core-utils>esbuild': '^0.25.0'
+
+# Supply-chain cooldown: never install a package version younger than 3 days
+# (most malicious releases are caught and unpublished within that window).
+# For an urgent security fix, add the package to minimumReleaseAgeExclude.
+minimumReleaseAge: 4320
