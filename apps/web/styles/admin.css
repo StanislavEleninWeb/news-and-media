@@ -1,0 +1,231 @@
+/* Admin: dense, functional, same tokens as the site. */
+.admin {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 100vh;
+  font-size: 0.92rem;
+}
+@media (max-width: 860px) {
+  .admin {
+    grid-template-columns: 1fr;
+  }
+}
+.admin__nav {
+  background: var(--brand);
+  color: #fff;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+:root[data-theme='dark'] .admin__nav,
+.admin__nav {
+  --brand-ink: #fff;
+}
+.admin__nav .brand {
+  color: #fff;
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+.admin__nav a {
+  color: rgb(255 255 255 / 85%);
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+}
+.admin__nav a:hover,
+.admin__nav a[aria-current='page'] {
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  text-decoration: none;
+}
+.admin__nav small {
+  margin-top: auto;
+  opacity: 0.7;
+}
+.admin__main {
+  padding: 1.5rem clamp(1rem, 2vw, 2rem) 4rem;
+  min-width: 0;
+}
+.admin h1 {
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+}
+.admin h2 {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 0.75rem;
+}
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.admin-toolbar .input,
+.admin-toolbar .select,
+.admin-form .input,
+.admin-form .select,
+.admin-form textarea {
+  border-radius: 8px;
+  min-height: 38px;
+  width: auto;
+}
+.admin-form textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+}
+.admin .button {
+  min-height: 36px;
+  padding: 0 0.9rem;
+  font-size: 0.85rem;
+}
+.button--danger {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+}
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.data th,
+table.data td {
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+table.data th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  background: var(--chip);
+}
+table.data tr:last-child td {
+  border-bottom: 0;
+}
+.status {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--chip);
+  white-space: nowrap;
+}
+.status--published,
+.status--ok,
+.status--done {
+  background: #dcfce7;
+  color: #14532d;
+}
+.status--needs_review,
+.status--partial,
+.status--pending,
+.status--running {
+  background: #fef3c7;
+  color: #78350f;
+}
+.status--failed,
+.status--rejected,
+.status--error {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+.kpis {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  margin-bottom: 1.5rem;
+}
+.kpi {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  background: var(--paper-raised);
+}
+.kpi strong {
+  display: block;
+  font-size: 1.6rem;
+  font-family: var(--serif);
+}
+.kpi span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.editor {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 260px;
+  align-items: start;
+}
+@media (max-width: 1200px) {
+  .editor {
+    grid-template-columns: 1fr;
+  }
+}
+.panel {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.panel h2,
+.panel h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.raw-text {
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  max-height: 70vh;
+  overflow: auto;
+  color: var(--ink-soft);
+}
+.admin-form {
+  display: grid;
+  gap: 0.75rem;
+}
+.admin-form .field {
+  font-size: 0.8rem;
+}
+.form-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.check {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.notice {
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: var(--chip);
+  font-size: 0.85rem;
+}
+.notice--error {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+.preview-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+}

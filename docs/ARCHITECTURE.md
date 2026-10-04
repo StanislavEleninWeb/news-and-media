@@ -145,3 +145,27 @@ browser offers it) — the MVP's stand-in for native apps. `public/sw.js`:
 
 **Lite mode** hides photos entirely (they are never requested). It turns on automatically on
 data-saver or 2G connections and can be toggled in the "Aa" menu.
+
+## Admin CMS (`/admin`)
+
+English-language newsroom UI for editors and admins (role on `users`; create the first one with
+`cli create-admin`). Every page and server action re-checks the session and role; `/admin` is
+`noindex`, excluded in `robots.txt`, and staging is additionally behind HTTP basic auth.
+
+* **Review queue** — articles the originality guard sent to `needs_review`, failed ones, everything
+  else filterable by status and title. The editor shows the source text next to the Bulgarian and
+  English versions.
+* **Editing** — changing published text requires a correction note, which is published in the
+  article's correction log together with the previous version.
+* **Breaking news** — "Approve as urgent" (with a 1–24 h pin) is the *only* way a story becomes
+  urgent; it records the editor and time and queues the push notification. The AI never sets it.
+* **Sources** — add, edit, pause, delete (or deactivate when they have articles) at runtime; "Test
+  fetch" dry-runs the scraper and shows what it would pick up; "Fetch now" queues a run.
+* **Topics** — add, rename, reorder, deactivate (slugs are permanent: they are in URLs and the AI's
+  classification list).
+* **Runs & jobs** — pipeline history, the job queue, and buttons to fetch, process or rebuild the
+  search index now.
+
+Admin actions that change what readers see revalidate the cached public pages immediately. Manual
+"run now" requests go through the PostgreSQL job queue (`jobs` table, `FOR UPDATE SKIP LOCKED`), which
+the worker polls every 5 s in every environment.

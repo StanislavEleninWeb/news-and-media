@@ -39,3 +39,6 @@ pnpm dev                   # web on http://localhost:3000 and the worker, with h
 | `pnpm --filter @nm/worker cli help` | Operator commands |
 
 Mail sent in development is caught by Mailpit at http://localhost:8025.
+
+Newsroom admin: http://localhost:3000/admin — create an account with
+`pnpm --filter @nm/worker cli create-admin --email you@example.com --password '<10+ chars>'`.

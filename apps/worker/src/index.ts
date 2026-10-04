@@ -2,8 +2,9 @@ import { getConfig, getLogger } from '@nm/core';
 import { closeDb, getDb } from '@nm/db';
 import { createProcessDeps, processArticles } from '@nm/services/ai/process';
 import { createIngestDeps, runIngestion } from '@nm/services/ingestion/ingest';
+import { runDueJobs, type JobHandlers } from '@nm/services/jobs/queue';
 import { createTypesense } from '@nm/services/search/search';
-import { syncSearchIndex } from '@nm/services/search/sync';
+import { rebuildSearchIndex, syncSearchIndex } from '@nm/services/search/sync';
 import { Scheduler } from './scheduler';
 
 const config = getConfig();
@@ -59,6 +60,46 @@ if (searchIndex) {
 } else {
   logger.warn('TYPESENSE_URL not set: search uses the PostgreSQL fallback');
 }
+
+// Job queue: "run now" requests from the admin, and notification fan-out.
+// Always on (also in dev), so manual triggers work without automatic schedules.
+const jobHandlers: JobHandlers = {
+  ingest_sources: async (job) => {
+    const sourceIds = Array.isArray(job.payload.sourceIds)
+      ? (job.payload.sourceIds as string[])
+      : undefined;
+    await runIngestion(ingestDeps, { trigger: 'manual', sourceIds });
+  },
+  process_articles: async (job) => {
+    const articleIds = Array.isArray(job.payload.articleIds)
+      ? (job.payload.articleIds as string[])
+      : undefined;
+    await processArticles(processDeps, {
+      trigger: 'manual',
+      articleIds: articleIds?.length ? articleIds : undefined,
+    });
+  },
+  reindex: async () => {
+    if (searchIndex) await rebuildSearchIndex(db, searchIndex);
+  },
+  urgent_push: async (job) => {
+    logger.info(
+      { payload: job.payload },
+      'urgent push requested (notifications are added in a later step)',
+    );
+  },
+};
+scheduler.register({
+  name: 'jobs',
+  everyMs: 5_000,
+  automatic: false,
+  run: async () => {
+    await runDueJobs(db, jobHandlers, {
+      onError: (job, error) =>
+        logger.warn({ job: job.id, kind: job.kind, err: (error as Error).message }, 'job failed'),
+    });
+  },
+});
 
 logger.info({ scheduler: config.SCHEDULER_ENABLED, tasks: scheduler.taskNames }, 'worker started');
 
