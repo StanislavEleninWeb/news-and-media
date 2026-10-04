@@ -6,6 +6,7 @@ import { SiteFooter, SiteHeader } from '@/components/SiteChrome';
 import { ViewerProvider } from '@/components/ViewerProvider';
 import { isLocale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
+import { displayPrefsScript } from '@/lib/display-prefs';
 import { getNavTopics, siteName, siteUrl } from '@/lib/site';
 
 // Pages are rendered on first request and then served from cache (ISR) —
@@ -52,7 +53,11 @@ export default async function LocaleLayout({
   const topics = await getNavTopics(locale);
   const name = siteName();
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
+      <head>
+        {/* Applies saved reading preferences before first paint (no theme flash). */}
+        <script dangerouslySetInnerHTML={{ __html: displayPrefsScript }} />
+      </head>
       <body>
         <a className="skip-link" href="#content">
           {locale === 'bg' ? 'Към съдържанието' : 'Skip to content'}

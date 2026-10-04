@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: { alias: { '@': path.resolve(__dirname) } },
+  esbuild: { jsx: 'automatic' },
   test: {
     pool: 'forks',
     testTimeout: 20_000,

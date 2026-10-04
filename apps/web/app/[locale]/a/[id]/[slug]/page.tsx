@@ -6,7 +6,9 @@ import { getDb } from '@nm/db';
 import { getArticle } from '@nm/services/content/article';
 import { AdSlot } from '@/components/AdSlot';
 import { ArticleCard } from '@/components/ArticleCard';
-import { ExternalIcon } from '@/components/Icons';
+import { ArticleActions } from '@/components/article/ArticleActionsBar';
+import { Reactions } from '@/components/article/ArticleActions';
+import { TrustPanel } from '@/components/article/TrustPanel';
 import { ViewBeacon } from '@/components/ViewBeacon';
 import { isLocale, type Locale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
@@ -103,6 +105,16 @@ export default async function ArticlePage({ params }: Props) {
           <span>
             {t.article.source}: {article.source.name}
           </span>
+          {article.isAiRewritten ? (
+            <a className="ai-badge" href="#transparency">
+              {t.trust.aiLabel}
+            </a>
+          ) : null}
+          {article.corrections.length ? (
+            <a href="#corrections">
+              {t.trust.corrections} ({article.corrections.length})
+            </a>
+          ) : null}
           {article.alternates.map((alternate) => (
             <Link
               key={alternate.locale}
@@ -114,6 +126,13 @@ export default async function ArticlePage({ params }: Props) {
             </Link>
           ))}
         </div>
+
+        <ArticleActions
+          articleId={article.id}
+          locale={locale}
+          path={article.path}
+          title={article.title}
+        />
 
         <section className="tldr" aria-label={t.article.inShort}>
           <p className="tldr__label">
@@ -157,15 +176,11 @@ export default async function ArticlePage({ params }: Props) {
           ))}
         </div>
 
-        <aside className="source-box">
-          <span>
-            {t.article.source}: <strong>{article.source.name}</strong>
-          </span>
-          <a href={article.originalUrl} target="_blank" rel="noopener noreferrer nofollow">
-            {t.article.originalArticle}{' '}
-            <ExternalIcon style={{ display: 'inline', verticalAlign: '-2px' }} />
-          </a>
-        </aside>
+        <Reactions articleId={article.id} locale={locale} />
+
+        <div id="transparency">
+          <TrustPanel article={article} locale={locale} />
+        </div>
 
         <div className="article__footer">
           <AdSlot placement="article_bottom" locale={locale} />
