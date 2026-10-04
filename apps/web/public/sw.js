@@ -117,3 +117,40 @@ self.addEventListener('message', (event) => {
     event.waitUntil(caches.open(SAVED).then((cache) => cache.delete(url)));
   }
 });
+
+// Push notifications (breaking news, daily briefing) ---------------------------
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: event.data ? event.data.text() : '' };
+  }
+  const url = typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/';
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Newsmedia', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: data.tag,
+      renotify: Boolean(data.tag && data.tag.startsWith('urgent')),
+      data: { url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(
+    (event.notification.data && event.notification.data.url) || '/',
+    self.location.origin,
+  ).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (client.url === url && 'focus' in client) return client.focus();
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
+});

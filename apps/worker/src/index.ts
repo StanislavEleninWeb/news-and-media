@@ -3,6 +3,8 @@ import { closeDb, getDb } from '@nm/db';
 import { createProcessDeps, processArticles } from '@nm/services/ai/process';
 import { createIngestDeps, runIngestion } from '@nm/services/ingestion/ingest';
 import { runDueJobs, type JobHandlers } from '@nm/services/jobs/queue';
+import { scheduleDigests, sendDigest, sendUrgentPush } from '@nm/services/notifications/fanout';
+import { createWebPushSender } from '@nm/services/notifications/push';
 import { createTypesense } from '@nm/services/search/search';
 import { rebuildSearchIndex, syncSearchIndex } from '@nm/services/search/sync';
 import { Scheduler } from './scheduler';
@@ -61,6 +63,9 @@ if (searchIndex) {
   logger.warn('TYPESENSE_URL not set: search uses the PostgreSQL fallback');
 }
 
+const pushSender = createWebPushSender(config);
+if (!pushSender) logger.warn('VAPID keys not set: push notifications are disabled');
+
 // Job queue: "run now" requests from the admin, and notification fan-out.
 // Always on (also in dev), so manual triggers work without automatic schedules.
 const jobHandlers: JobHandlers = {
@@ -83,12 +88,25 @@ const jobHandlers: JobHandlers = {
     if (searchIndex) await rebuildSearchIndex(db, searchIndex);
   },
   urgent_push: async (job) => {
-    logger.info(
-      { payload: job.payload },
-      'urgent push requested (notifications are added in a later step)',
-    );
+    const result = await sendUrgentPush(db, pushSender, String(job.payload.articleId));
+    logger.info({ articleId: job.payload.articleId, ...result }, 'urgent push sent');
+  },
+  digest: async (job) => {
+    const result = await sendDigest(db, pushSender, String(job.payload.userId));
+    logger.debug({ userId: job.payload.userId, ...result }, 'digest processed');
   },
 };
+
+// Daily briefing: at DIGEST_HOUR local time, one digest job per opted-in reader (production schedule).
+scheduler.register({
+  name: 'schedule-digests',
+  everyMs: 5 * 60_000,
+  automatic: true,
+  run: async () => {
+    const queued = await scheduleDigests(db);
+    if (queued) logger.info({ queued }, 'daily digests queued');
+  },
+});
 scheduler.register({
   name: 'jobs',
   everyMs: 5_000,

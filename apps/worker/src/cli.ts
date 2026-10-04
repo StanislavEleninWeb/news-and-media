@@ -12,6 +12,11 @@ import { monthToDateSpend } from '@nm/services/ai/budget';
 import { upsertStaffUser } from '@nm/services/auth/accounts';
 import { createProcessDeps, processArticles, requeueArticles } from '@nm/services/ai/process';
 import { createIngestDeps, ingestSource, runIngestion } from '@nm/services/ingestion/ingest';
+import { sendDigest } from '@nm/services/notifications/fanout';
+import { createWebPushSender, pushToUser } from '@nm/services/notifications/push';
+import { generateVAPIDKeys } from 'web-push';
+import { users } from '@nm/db/schema';
+import { sql } from 'drizzle-orm';
 import { createSearchBackend, createTypesense } from '@nm/services/search/search';
 import { rebuildSearchIndex, syncSearchIndex } from '@nm/services/search/sync';
 
@@ -121,6 +126,46 @@ const commands: Record<string, Command> = {
       const role = flagValues(args, '--role')[0] === 'editor' ? 'editor' : 'admin';
       const user = await upsertStaffUser(getDb(), { email, password, role });
       console.log(`${user.email} is now ${user.role}`);
+    },
+  },
+  'generate-vapid-keys': {
+    describe: 'Print a new VAPID key pair for Web Push (put them in .env once per environment)',
+    run: async () => {
+      const keys = generateVAPIDKeys();
+      console.log(`VAPID_PUBLIC_KEY=${keys.publicKey}\nVAPID_PRIVATE_KEY=${keys.privateKey}`);
+    },
+  },
+  'send-digest': {
+    describe: 'Send the daily briefing to one reader now: --email <address>',
+    run: async (args) => {
+      const [email] = flagValues(args, '--email');
+      if (!email) throw new Error('--email is required');
+      const [user] = await getDb()
+        .select()
+        .from(users)
+        .where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
+      if (!user) throw new Error('user not found');
+      console.log(await sendDigest(getDb(), createWebPushSender(), user.id));
+    },
+  },
+  'test-push': {
+    describe: 'Send a test push to every device of a reader: --email <address>',
+    run: async (args) => {
+      const [email] = flagValues(args, '--email');
+      const send = createWebPushSender();
+      if (!email || !send) throw new Error('--email is required and VAPID keys must be set');
+      const [user] = await getDb()
+        .select()
+        .from(users)
+        .where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
+      if (!user) throw new Error('user not found');
+      console.log(
+        await pushToUser(getDb(), send, user, {
+          title: 'Test',
+          body: 'Push notifications work.',
+          url: `/${user.locale}`,
+        }),
+      );
     },
   },
   'add-source': {
