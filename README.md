@@ -22,7 +22,7 @@ Requirements: Node 22, pnpm 10 (`corepack enable`), Docker.
 ```bash
 pnpm install
 cp .env.example .env
-pnpm dev:services          # postgres, typesense, mailpit (+ worker container)
+pnpm dev:services          # postgres, typesense, mailpit
 pnpm dev                   # web on http://localhost:3000 and the worker, with hot reload
 ```
 

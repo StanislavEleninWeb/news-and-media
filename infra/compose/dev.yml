@@ -1,7 +1,10 @@
-# Local development services.
-#   docker compose -f infra/compose/dev.yml up -d            # postgres, typesense, mailpit, worker
-#   docker compose -f infra/compose/dev.yml --profile web up # + the web app in a container
-# Most of the time run the apps with `pnpm dev` for hot reload and keep only the services here.
+# Local development.
+#   pnpm dev:services                                         # postgres, typesense, mailpit only
+#   pnpm dev                                                  # web + worker on the host, hot reload
+# Or everything in containers:
+#   docker compose -f infra/compose/dev.yml up -d             # + the worker container
+#   docker compose -f infra/compose/dev.yml --profile web up  # + the web app container
+# Media is a bind mount of <repo>/data/media, shared by host processes and containers.
 name: newsmedia-dev
 
 services:
@@ -42,7 +45,7 @@ services:
       STORAGE_LOCAL_DIR: /data/media
       # Dev never runs schedules automatically; trigger work from the admin or the CLI.
       SCHEDULER_ENABLED: 'false'
-    volumes: [media:/data/media]
+    volumes: ['../../data/media:/data/media']
     depends_on:
       postgres: { condition: service_healthy }
 
@@ -58,11 +61,10 @@ services:
       SMTP_URL: smtp://mailpit:1025
       STORAGE_LOCAL_DIR: /data/media
     ports: ['3000:3000']
-    volumes: [media:/data/media]
+    volumes: ['../../data/media:/data/media']
     depends_on:
       postgres: { condition: service_healthy }
 
 volumes:
   postgres:
   typesense:
-  media:
