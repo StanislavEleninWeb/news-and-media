@@ -92,7 +92,9 @@ when the primary is down. Operator commands: `cli process`, `cli reprocess <id>`
 
 Typesense holds one document per article **and locale** (`<id>_bg`, `<id>_en`) with title, TL;DR,
 body, topics, source and publish time; queries are filtered by locale (and optionally topic), ranked
-by relevance then recency, with typo tolerance and highlighted snippets. Collections are namespaced per
+by relevance then recency, with highlighted snippets. English queries tolerate one typo; Bulgarian
+queries use exact and prefix matching only, because Typesense counts typos in bytes and a Cyrillic
+letter takes two. Collections are namespaced per
 environment (`TYPESENSE_COLLECTION_PREFIX`, default `<APP_ENV>_`).
 
 The worker's `search-sync` task (every 30 s, all environments) indexes newly published articles and
