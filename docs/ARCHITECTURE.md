@@ -119,3 +119,15 @@ simple PostgreSQL search, which is enough for local development.
   styles and a skip link for keyboard users.
 * **SEO:** per-page metadata, canonical + `hreflang`, Open Graph, `NewsArticle` JSON-LD (with
   `isBasedOn` pointing at the original), `sitemap.xml` and `robots.txt` (staging/dev disallow all).
+
+## Engagement & trust (reader-facing)
+
+* **Reading list** — save/unsave on every article (signed-in readers), `/<locale>/saved`.
+* **Reactions** — five reactions, one per reader per article, no account needed.
+* **Transparency on every article** — an "AI-rewritten" label in the byline and a disclosure naming the
+  source, a note when the text is a machine translation, the source's reliability rating (set by
+  editors), a prominent link to the original, and the public correction log.
+* **Reading settings** — text size, theme (system/light/dark) and high contrast in the "Aa" menu,
+  stored in the browser and applied by a tiny inline script before first paint (no flash, and pages
+  stay identical for everyone so they remain cacheable). Lite mode switches on automatically on
+  data-saver/2G connections.

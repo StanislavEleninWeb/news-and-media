@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
-import { SearchIcon, UserIcon } from './Icons';
+import { DisplaySettings } from './DisplaySettings';
+import { BookmarkIcon, SearchIcon, UserIcon } from './Icons';
 import { useViewer } from './ViewerProvider';
 
 export function LanguageSwitch({ locale }: { locale: Locale }) {
@@ -37,6 +38,17 @@ export function HeaderActions({ locale }: { locale: Locale }) {
       >
         <SearchIcon />
       </Link>
+      {viewer.status === 'signed-in' ? (
+        <Link
+          className="icon-button"
+          href={`/${locale}/saved`}
+          aria-label={t.nav.saved}
+          prefetch={false}
+        >
+          <BookmarkIcon />
+        </Link>
+      ) : null}
+      <DisplaySettings locale={locale} />
       <LanguageSwitch locale={locale} />
       <Link className="text-button" href={`/${locale}/account`} prefetch={false}>
         <UserIcon />
