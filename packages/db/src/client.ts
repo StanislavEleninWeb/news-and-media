@@ -37,3 +37,8 @@ export async function closeDb(): Promise<void> {
   await instance?.close();
   instance = undefined;
 }
+
+/** Tests only: make getDb() return the given database (e.g. PGlite). */
+export function setDbForTesting(db: Db | undefined): void {
+  instance = db ? { db, close: async () => {} } : undefined;
+}

@@ -5,7 +5,7 @@ Self-running news & media trends platform in Bulgarian and English, by SEWEB.
 ## Stack
 
 Next.js 15 web app (site + API + admin) · Node worker · PostgreSQL · Typesense · Caddy ·
-Docker Compose on a VPS · GitHub Actions. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
+Docker Compose on a VPS · GitHub Actions. Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), API: [docs/API.md](docs/API.md),
 deployment: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ```
