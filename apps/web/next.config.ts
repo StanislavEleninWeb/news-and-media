@@ -27,7 +27,17 @@ const nextConfig: NextConfig = {
   // Images are pre-rendered to webp renditions at ingestion time and served by Caddy.
   images: { unoptimized: true },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      {
+        // The service worker must always be revalidated so updates reach readers quickly.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+    ];
   },
 };
 

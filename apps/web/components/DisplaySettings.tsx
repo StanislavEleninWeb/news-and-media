@@ -19,7 +19,11 @@ export function DisplaySettings({ locale }: { locale: Locale }) {
   const [prefs, setPrefs] = useState<DisplayPrefs>(defaultDisplayPrefs);
   const panel = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setPrefs(readDisplayPrefs()), []);
+  useEffect(() => {
+    const stored = readDisplayPrefs();
+    // Reflect automatic lite mode (data saver) in the toggle.
+    setPrefs({ ...stored, lite: stored.lite || document.documentElement.dataset.lite === 'on' });
+  }, []);
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
@@ -102,6 +106,14 @@ export function DisplaySettings({ locale }: { locale: Locale }) {
               onChange={(e) => update({ contrast: e.target.checked ? 'high' : 'normal' })}
             />
             {t.contrast}
+          </label>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={prefs.lite}
+              onChange={(e) => update({ lite: e.target.checked })}
+            />
+            {t.lite}
           </label>
           <button className="text-button" type="button" onClick={() => setOpen(false)}>
             {t.close}
