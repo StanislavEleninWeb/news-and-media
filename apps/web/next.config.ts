@@ -18,8 +18,8 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // Trace files from the monorepo root so workspace packages land in the standalone bundle.
   outputFileTracingRoot: path.resolve(process.cwd(), '../..'),
-  transpilePackages: ['@nm/core'],
-  serverExternalPackages: ['pino'],
+  transpilePackages: ['@nm/core', '@nm/db', '@nm/services'],
+  serverExternalPackages: ['pino', 'sharp', 'linkedom', 'rss-parser'],
   poweredByHeader: false,
   // Linting runs once at the repository root (pnpm lint), not inside next build.
   eslint: { ignoreDuringBuilds: true },

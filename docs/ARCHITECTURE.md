@@ -39,3 +39,24 @@ Defined in `packages/db/src/schema.ts` (Drizzle), migrations in `packages/db/mig
 
 Migrations run automatically on deploy and are generated with `pnpm db:generate`. Tests run against
 an in-process PostgreSQL (PGlite), so no database server is needed to run the suite.
+
+## Ingestion (worker)
+
+Every minute the worker picks the sources whose `next_fetch_at` has passed (so each source's own
+interval, set in the admin, controls frequency):
+
+1. Read the RSS/Atom feed — or, for `html` sources, collect article links from the listing page with
+   the source's CSS selector.
+2. Normalise URLs (tracking parameters removed) and skip known ones.
+3. Respect `robots.txt` (cached per site for 6 h) and fetch the article page through a guarded client
+   that refuses private/internal addresses, caps size and time, and follows at most 5 redirects.
+4. Extract the main text with Mozilla Readability (falls back to the feed's content), decode
+   windows-1251 pages, skip texts shorter than `INGEST_MIN_TEXT_LENGTH`.
+5. Drop the same headline syndicated by several sources within 72 h.
+6. Download the image **only if the source is marked `images_allowed`** (licensing — discovery doc,
+   section D), convert it to webp renditions (1280 px and 480 px for lite mode).
+7. Store the article as `ingested`; the AI step picks it up next.
+
+Failing sources back off exponentially (up to 8× their interval). Every run is recorded in
+`pipeline_runs`. Operator commands: `cli ingest`, `cli ingest --source <id>`, `cli test-source <id>`,
+`cli add-source --url … --name …`.

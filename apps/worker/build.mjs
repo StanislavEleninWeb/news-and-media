@@ -2,7 +2,8 @@
 // Native or very large npm packages are left external and installed in the image.
 import { build } from 'esbuild';
 
-const external = ['sharp'];
+// sharp: native, installed in the image. canvas: optional linkedom peer we never use.
+const external = ['sharp', 'canvas'];
 
 await build({
   entryPoints: ['src/index.ts', 'src/cli.ts', 'src/migrate.ts'],

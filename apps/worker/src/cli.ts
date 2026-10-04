@@ -2,10 +2,17 @@
  * Operator CLI. In containers: `docker compose run --rm worker node dist/cli.js <command>`.
  * Locally: `pnpm --filter @nm/worker cli <command>`.
  */
+import { eq } from 'drizzle-orm';
 import { getConfig, getLogger } from '@nm/core';
 import { closeDb, getDb } from '@nm/db';
 import { runMigrations } from '@nm/db/migrate';
+import { sources } from '@nm/db/schema';
 import { seedDevelopment, seedTopics } from '@nm/db/seed';
+import { createIngestDeps, ingestSource, runIngestion } from '@nm/services/ingestion/ingest';
+
+function flagValues(args: string[], flag: string): string[] {
+  return args.flatMap((arg, i) => (arg === flag && args[i + 1] ? [args[i + 1]!] : []));
+}
 
 type Command = { describe: string; run: (args: string[]) => Promise<void> };
 
@@ -31,6 +38,49 @@ const commands: Record<string, Command> = {
     run: async () => {
       const inserted = await seedTopics(getDb());
       console.log(`${inserted} topics inserted`);
+    },
+  },
+  ingest: {
+    describe: 'Fetch due sources now (or: --source <id> [--source <id>])',
+    run: async (args) => {
+      const ids = flagValues(args, '--source');
+      const summary = await runIngestion(createIngestDeps(getDb()), {
+        trigger: 'cli',
+        sourceIds: ids.length ? ids : undefined,
+      });
+      console.log(JSON.stringify({ ...summary, results: undefined }, null, 2));
+    },
+  },
+  'add-source': {
+    describe:
+      'Add a source: --url <feed> --name <name> [--lang bg] [--kind rss|html --selector <css>] [--images-allowed]',
+    run: async (args) => {
+      const [url] = flagValues(args, '--url');
+      const [name] = flagValues(args, '--name');
+      if (!url || !name) throw new Error('--url and --name are required');
+      const [kind] = flagValues(args, '--kind');
+      const [row] = await getDb()
+        .insert(sources)
+        .values({
+          url,
+          name,
+          language: flagValues(args, '--lang')[0] ?? 'bg',
+          kind: kind === 'html' ? 'html' : 'rss',
+          linkSelector: flagValues(args, '--selector')[0] ?? null,
+          imagesAllowed: args.includes('--images-allowed'),
+        })
+        .returning({ id: sources.id });
+      console.log(row!.id);
+    },
+  },
+  'test-source': {
+    describe: 'Dry-run one source: list what would be ingested, without saving (<id>)',
+    run: async ([id]) => {
+      if (!id) throw new Error('usage: test-source <source id>');
+      const [source] = await getDb().select().from(sources).where(eq(sources.id, id));
+      if (!source) throw new Error(`source ${id} not found`);
+      const result = await ingestSource(createIngestDeps(getDb()), source, { dryRun: true });
+      console.log(JSON.stringify(result, null, 2));
     },
   },
   help: {
