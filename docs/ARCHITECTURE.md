@@ -188,3 +188,22 @@ Self-hosted, no third-party notification service:
 * **Safety net** — outside production nothing is delivered except to `NOTIFY_ALLOWLIST`.
 
 Operator commands: `cli send-digest --email <e>`, `cli test-push --email <e>`.
+
+## Ads
+
+Five placements (`home_top`, `feed_inline`, `article_inline`, `article_bottom`, `search_inline`) are
+part of the page layout from day one, each a fixed-size box (970×90 / 728×90, 320×100 on phones) so a
+creative arriving — or not — never shifts the content. Creatives load in the browser from
+`/api/v1/ads`, which keeps cached pages identical for everyone and rotates creatives per view.
+
+* **Direct-sold and house ads** are managed in `/admin/ads`: placement, language, schedule, rotation
+  weight, upload (re-encoded to WebP) or image URL, click-through URL, alt text. Direct-sold ads win
+  over house ads; impressions, clicks and CTR are shown per ad.
+* **Consent first** — a cookie banner offers "accept all" or "necessary only". Impression beacons and
+  click counting happen only with consent; without it the ad links straight to the advertiser. No
+  third-party ad scripts are loaded at all in the MVP. Click redirects use the URL stored for the ad,
+  never one from the request (no open redirect).
+* **Programmatic** exchanges (e.g. Google Ad Manager with header bidding) are deferred to v1; they slot
+  into the same placements.
+
+`/<locale>/privacy` explains the cookies in plain language — have it reviewed before launch.

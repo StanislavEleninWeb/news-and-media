@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Locale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
 import { formatDate } from '@/lib/format';
+import { CookieSettingsLink } from './ConsentBanner';
 import { HeaderActions, TopicNav } from './HeaderClient';
 import { InstallButton } from './PwaSupport';
 
@@ -58,6 +59,10 @@ export function SiteFooter({ locale, siteName }: { locale: Locale; siteName: str
           </p>
           <p style={{ marginTop: '0.5rem' }}>
             © {new Date().getFullYear()} {siteName}. {t.footer.rights}
+          </p>
+          <p style={{ marginTop: '0.5rem' }}>
+            <Link href={`/${locale}/privacy`}>{locale === 'bg' ? 'Поверителност' : 'Privacy'}</Link>{' '}
+            · <CookieSettingsLink locale={locale} />
           </p>
           <div style={{ marginTop: '0.75rem' }}>
             <InstallButton locale={locale} />

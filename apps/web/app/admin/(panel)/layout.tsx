@@ -11,6 +11,7 @@ const links = [
   { href: '/admin/articles', label: 'Articles' },
   { href: '/admin/sources', label: 'Sources' },
   { href: '/admin/topics', label: 'Topics' },
+  { href: '/admin/ads', label: 'Ads' },
   { href: '/admin/runs', label: 'Runs & jobs' },
 ];
 
