@@ -32,6 +32,8 @@ them. The API never calls an AI model at request time — it only reads PostgreS
 | GET | `/api/v1/push/vapid-public-key` | – | Public VAPID key (or `null` when push is not configured) |
 | POST | `/api/v1/push/subscriptions` | session | Register this device's push subscription (https endpoints only) |
 | DELETE | `/api/v1/push/subscriptions` `{endpoint}` | session | Remove this device |
+| POST | `/api/v1/ads/:id/impression` | consent | Impression beacon (counted only with `nm_consent=all`) |
+| GET | `/api/v1/ads/:id/click` | – | Redirect to the ad's stored URL; counts the click only with consent |
 | GET | `/api/health` | – | 200 when database (and search, if configured) are reachable; 503 otherwise |
 
 Conventions:

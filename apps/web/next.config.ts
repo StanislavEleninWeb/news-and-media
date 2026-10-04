@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Images are pre-rendered to webp renditions at ingestion time and served by Caddy.
   images: { unoptimized: true },
+  // Ad creatives are uploaded through admin server actions.
+  experimental: { serverActions: { bodySizeLimit: '6mb' } },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

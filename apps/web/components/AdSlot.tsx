@@ -1,22 +1,22 @@
 import type { Locale } from '@/i18n/config';
+import { AdCreative } from './AdCreative';
 
 export type AdPlacement =
   'home_top' | 'feed_inline' | 'article_inline' | 'article_bottom' | 'search_inline';
 
 /**
- * Reserved, fixed-size space for an ad. The box always keeps its size so an
- * ad arriving (or not) never shifts the content (CLS). Creatives are wired in
- * by the ad-slot step.
+ * Fixed-size ad space. The box keeps its size whether or not a creative
+ * arrives, so ads never shift the content (CLS). Creatives load in the browser.
  */
 export function AdSlot({ placement, locale }: { placement: AdPlacement; locale: Locale }) {
   return (
-    <div className="ad-row">
-      <div
-        className={`ad-slot ad-slot--${placement}`}
-        data-placement={placement}
-        aria-hidden="true"
-      >
-        <span className="ad-slot__label">{locale === 'bg' ? 'Реклама' : 'Advertisement'}</span>
+    <div className="ad-row" data-lite-hide="">
+      <div className={`ad-slot ad-slot--${placement}`} data-placement={placement}>
+        <AdCreative
+          placement={placement}
+          locale={locale}
+          label={locale === 'bg' ? 'Реклама' : 'Advertisement'}
+        />
       </div>
     </div>
   );

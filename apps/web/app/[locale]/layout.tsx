@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 import '@/styles/globals.css';
+import { ConsentBanner } from '@/components/ConsentBanner';
 import { ServiceWorkerRegistration } from '@/components/PwaSupport';
 import { SiteFooter, SiteHeader } from '@/components/SiteChrome';
 import { ViewerProvider } from '@/components/ViewerProvider';
@@ -69,6 +70,7 @@ export default async function LocaleLayout({
           <main id="content">{children}</main>
           <SiteFooter locale={locale} siteName={name} />
         </ViewerProvider>
+        <ConsentBanner locale={locale} />
         <ServiceWorkerRegistration />
       </body>
     </html>
