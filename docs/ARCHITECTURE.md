@@ -102,3 +102,20 @@ re-indexes or removes articles whose `updated_at` is newer than `indexed_at` —
 an article only needs to touch the article row. `cli reindex` rebuilds a collection from PostgreSQL
 (new environment, schema change) without re-scraping. Without `TYPESENSE_URL`, the API falls back to a
 simple PostgreSQL search, which is enough for local development.
+
+## Web frontend
+
+* **Routing:** every public page lives under `/bg` or `/en` (`app/[locale]`). `middleware.ts` sends
+  prefix-less URLs to the reader's last language (cookie) or browser language; Bulgarian is the default.
+  Article URLs are `/<locale>/a/<id>/<slug>`; a wrong or other-language slug redirects to the canonical
+  one, and `hreflang` alternates link the two language versions.
+* **Speed:** pages are server components rendered on first request and then served from the Next.js
+  cache (ISR — home and topics 60 s, articles 5 min); nothing is prerendered at build time, so builds
+  need no database. Pages contain no per-user data: who is signed in, the "For you" tab and "load
+  more" are fetched in the browser from `/api/v1`. No web fonts, no client-side data libraries, images
+  lazy-loaded with fixed dimensions, ad space reserved up front (no layout shift).
+* **Design:** editorial and typography-led (most stories have no licensed image), serif headlines and
+  system sans body text that both cover Cyrillic, light/dark following the system setting, focus
+  styles and a skip link for keyboard users.
+* **SEO:** per-page metadata, canonical + `hreflang`, Open Graph, `NewsArticle` JSON-LD (with
+  `isBasedOn` pointing at the original), `sitemap.xml` and `robots.txt` (staging/dev disallow all).
