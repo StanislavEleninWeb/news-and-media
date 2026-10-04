@@ -1,0 +1,25 @@
+{
+  "name": "@nm/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "studio": "drizzle-kit studio",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nm/core": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "postgres": "3.4.9"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "drizzle-kit": "0.31.11"
+  }
+}

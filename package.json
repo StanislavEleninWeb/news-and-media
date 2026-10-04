@@ -15,7 +15,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "dev:services": "docker compose -f infra/compose/dev.yml up -d postgres typesense mailpit",
-    "dev:services:down": "docker compose -f infra/compose/dev.yml down"
+    "dev:services:down": "docker compose -f infra/compose/dev.yml down",
+    "db:generate": "pnpm --filter @nm/db generate",
+    "db:migrate": "pnpm --filter @nm/worker cli migrate",
+    "db:seed": "pnpm --filter @nm/worker cli seed",
+    "db:studio": "pnpm --filter @nm/db studio"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

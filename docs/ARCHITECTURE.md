@@ -20,3 +20,22 @@
 * **Lazy configuration.** `getConfig()` validates on first use, so builds and tests never need secrets.
 * **No LLM calls on the request path.** AI work happens in the worker; pages and API read from
   Postgres/Typesense (discovery doc, section A).
+
+## Data model
+
+Defined in `packages/db/src/schema.ts` (Drizzle), migrations in `packages/db/migrations`.
+
+* **sources** — managed from the admin at runtime (add, edit, pause, delete). Each has a kind
+  (`rss` or `html` listing page), language, fetch interval, default topic, credibility rating and an
+  `images_allowed` flag: images are only downloaded from sources we are licensed to reuse.
+* **articles** — one row per scraped story with the raw text (never shown to readers), status
+  (`ingested → processing → published | needs_review | rejected | failed`), urgency (only active once an
+  editor approved it) and priority.
+* **article_localizations** — the reader-facing title, slug, TL;DR and body per locale (`bg`, `en`).
+* **article_corrections** — public correction log for edits to published text.
+* **topics** — editable list (general, politics, business, tech, culture, sport to start).
+* Reader tables: users, sessions, preferences, follows, saved articles, reactions, push subscriptions.
+* Operations: `jobs` (durable queue), `pipeline_runs`, `llm_usage` (budget cap), `system_state`.
+
+Migrations run automatically on deploy and are generated with `pnpm db:generate`. Tests run against
+an in-process PostgreSQL (PGlite), so no database server is needed to run the suite.

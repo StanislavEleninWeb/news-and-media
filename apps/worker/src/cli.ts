@@ -2,11 +2,37 @@
  * Operator CLI. In containers: `docker compose run --rm worker node dist/cli.js <command>`.
  * Locally: `pnpm --filter @nm/worker cli <command>`.
  */
-import { getLogger } from '@nm/core';
+import { getConfig, getLogger } from '@nm/core';
+import { closeDb, getDb } from '@nm/db';
+import { runMigrations } from '@nm/db/migrate';
+import { seedDevelopment, seedTopics } from '@nm/db/seed';
 
-type Command = (args: string[]) => Promise<void>;
+type Command = { describe: string; run: (args: string[]) => Promise<void> };
 
-const commands: Record<string, { describe: string; run: Command }> = {
+const commands: Record<string, Command> = {
+  migrate: {
+    describe: 'Apply pending database migrations',
+    run: async () => {
+      const url = getConfig().DATABASE_URL;
+      if (!url) throw new Error('DATABASE_URL is not set');
+      await runMigrations(url);
+      console.log('migrations applied');
+    },
+  },
+  seed: {
+    describe: 'Load development data (topics, example sources, sample articles). Dev only.',
+    run: async () => {
+      await seedDevelopment(getDb(), getConfig().APP_ENV);
+      console.log('development seed loaded');
+    },
+  },
+  'seed-topics': {
+    describe: 'Insert the default topic list (safe in every environment)',
+    run: async () => {
+      const inserted = await seedTopics(getDb());
+      console.log(`${inserted} topics inserted`);
+    },
+  },
   help: {
     describe: 'List available commands',
     run: async () => {
@@ -24,7 +50,11 @@ async function main() {
     console.error(`Unknown command "${name}". Run "help" for the list.`);
     process.exit(2);
   }
-  await command.run(args);
+  try {
+    await command.run(args);
+  } finally {
+    await closeDb();
+  }
 }
 
 main().catch((error: unknown) => {
