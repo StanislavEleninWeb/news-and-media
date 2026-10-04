@@ -60,3 +60,30 @@ interval, set in the admin, controls frequency):
 Failing sources back off exponentially (up to 8× their interval). Every run is recorded in
 `pipeline_runs`. Operator commands: `cli ingest`, `cli ingest --source <id>`, `cli test-source <id>`,
 `cli add-source --url … --name …`.
+
+## AI rewrite & translation (worker)
+
+Every minute the worker claims up to `LLM_MAX_ARTICLES_PER_RUN` articles in `ingested` state
+(flagship first; `FOR UPDATE SKIP LOCKED`, so parallel workers never double-process) and for each:
+
+1. **Rewrite** in the primary language — the source's language if it is Bulgarian or English,
+   otherwise Bulgarian — with Claude Haiku (`claude-haiku-4-5-20251001`) by default. The prompt forbids
+   adding facts and reusing the source's wording, requires attribution, and returns JSON with title,
+   TL;DR ("read in 30 seconds"), body and 1–3 topics from the live topic list.
+2. **Originality guard** — the share of the rewrite's 8-word sequences found in the source. Above
+   `LLM_SIMILARITY_THRESHOLD` (20 %) the model is asked once more with stricter instructions; if it is
+   still too close the article goes to `needs_review` instead of being published.
+3. **Translate** into the other language (LLM; DeepL instead for flagship articles when
+   `DEEPL_API_KEY` is set).
+4. Save both localizations, topics (fallback: the source's default topic), mark the article
+   `published` and AI-rewritten. Invalid model output is retried once; an article that fails three
+   times becomes `failed`.
+
+**Cost control.** Every call is logged in `llm_usage` with its cost. Processing stops when the month's
+spend reaches `LLM_MONTHLY_BUDGET_USD` (production default $50, elsewhere $5) and the run is recorded
+as failed so alerting picks it up. The shared system prompt is sent with Anthropic prompt caching;
+it only takes effect once that prefix exceeds the model's minimum cacheable length.
+
+**Switching provider** is configuration only: `LLM_PROVIDER=openai` with `OPENAI_COMPAT_*` uses any
+OpenAI-compatible API (DeepSeek, Groq, …), and `LLM_FALLBACK_PROVIDER` adds an automatic fallback
+when the primary is down. Operator commands: `cli process`, `cli reprocess <id>`, `cli llm-spend`.

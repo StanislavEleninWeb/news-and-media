@@ -1,5 +1,6 @@
 import { getConfig, getLogger } from '@nm/core';
 import { closeDb, getDb } from '@nm/db';
+import { createProcessDeps, processArticles } from '@nm/services/ai/process';
 import { createIngestDeps, runIngestion } from '@nm/services/ingestion/ingest';
 import { Scheduler } from './scheduler';
 
@@ -18,6 +19,25 @@ scheduler.register({
   automatic: true,
   run: async () => {
     await runIngestion(ingestDeps, { trigger: 'schedule' });
+  },
+});
+
+const processDeps = createProcessDeps(db);
+if (!processDeps.provider) {
+  logger.warn(
+    { reason: processDeps.providerError },
+    'AI processing disabled: no LLM provider configured',
+  );
+}
+
+// Rewrites newly ingested articles into Bulgarian and English (capped per run and per month).
+scheduler.register({
+  name: 'process',
+  everyMs: 60_000,
+  automatic: true,
+  run: async () => {
+    const summary = await processArticles(processDeps, { trigger: 'schedule' });
+    if (summary.status === 'budget_exceeded') logger.error(summary, 'LLM budget exhausted');
   },
 });
 

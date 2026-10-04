@@ -8,6 +8,8 @@ import { closeDb, getDb } from '@nm/db';
 import { runMigrations } from '@nm/db/migrate';
 import { sources } from '@nm/db/schema';
 import { seedDevelopment, seedTopics } from '@nm/db/seed';
+import { monthToDateSpend } from '@nm/services/ai/budget';
+import { createProcessDeps, processArticles, requeueArticles } from '@nm/services/ai/process';
 import { createIngestDeps, ingestSource, runIngestion } from '@nm/services/ingestion/ingest';
 
 function flagValues(args: string[], flag: string): string[] {
@@ -49,6 +51,31 @@ const commands: Record<string, Command> = {
         sourceIds: ids.length ? ids : undefined,
       });
       console.log(JSON.stringify({ ...summary, results: undefined }, null, 2));
+    },
+  },
+  process: {
+    describe: 'Rewrite/translate queued articles now (or: --article <id>)',
+    run: async (args) => {
+      const ids = flagValues(args, '--article');
+      const summary = await processArticles(createProcessDeps(getDb()), {
+        trigger: 'cli',
+        articleIds: ids.length ? ids : undefined,
+      });
+      console.log(JSON.stringify(summary, null, 2));
+    },
+  },
+  reprocess: {
+    describe: 'Put articles back in the AI queue: reprocess <id> [<id> ...]',
+    run: async (ids) => {
+      console.log(`${await requeueArticles(getDb(), ids)} article(s) queued`);
+    },
+  },
+  'llm-spend': {
+    describe: 'LLM spend this month vs. the budget',
+    run: async () => {
+      const spent = await monthToDateSpend(getDb());
+      const budget = getConfig().LLM_MONTHLY_BUDGET_USD;
+      console.log(`$${spent.toFixed(4)} of $${budget} (${((spent / budget) * 100).toFixed(1)}%)`);
     },
   },
   'add-source': {
