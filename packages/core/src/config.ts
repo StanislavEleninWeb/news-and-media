@@ -112,6 +112,14 @@ export const envSchema = z
     DIGEST_TIMEZONE: z.string().default('Europe/Sofia'),
     DIGEST_SIZE: z.coerce.number().int().min(3).max(20).default(8),
 
+    // Operations --------------------------------------------------------------
+    /** Optional error tracking (Sentry or self-hosted GlitchTip — same SDK). */
+    SENTRY_DSN: optionalString,
+    /** Slack/Discord/Mattermost-compatible incoming webhook for operational alerts. */
+    ALERT_WEBHOOK_URL: optionalString,
+    /** Operator e-mail for alerts (not subject to NOTIFY_ALLOWLIST). */
+    ALERT_EMAIL: optionalString,
+
     // Media storage ---------------------------------------------------------
     STORAGE_LOCAL_DIR: z.string().default('./data/media'),
     MEDIA_BASE_URL: z.string().default('/media'),

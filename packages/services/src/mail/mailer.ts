@@ -8,6 +8,8 @@ export interface MailMessage {
   text: string;
   html?: string;
   headers?: Record<string, string>;
+  /** Operational mail to the team (alerts): not subject to NOTIFY_ALLOWLIST. */
+  internal?: boolean;
 }
 
 export interface MailResult {
@@ -40,13 +42,13 @@ export async function sendMail(message: MailMessage): Promise<MailResult> {
   const config = getConfig();
   const logger = getLogger({ service: 'mail' });
   const from = config.MAIL_FROM;
+  const allowed = message.internal || isDeliveryAllowed(message.to, config);
   if (testOutbox) {
-    if (!isDeliveryAllowed(message.to, config))
-      return { delivered: false, reason: 'not_allowlisted' };
+    if (!allowed) return { delivered: false, reason: 'not_allowlisted' };
     testOutbox.push({ ...message, from });
     return { delivered: true };
   }
-  if (!isDeliveryAllowed(message.to, config)) {
+  if (!allowed) {
     logger.info(
       { to: message.to, subject: message.subject },
       'mail suppressed (not on NOTIFY_ALLOWLIST)',
