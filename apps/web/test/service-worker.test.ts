@@ -44,11 +44,23 @@ function loadServiceWorker(network: (request: Request) => Promise<Response>) {
     },
   };
   const listeners: Record<string, Listener> = {};
+  const notifications: { title: string; options: Record<string, unknown> }[] = [];
+  const opened: string[] = [];
   const self = {
+    notifications,
+    opened,
+    registration: {
+      showNotification: async (title: string, options: Record<string, unknown>) =>
+        void notifications.push({ title, options }),
+    },
     location: { origin: 'https://news.test' },
     addEventListener: (type: string, fn: Listener) => (listeners[type] = fn),
     skipWaiting: () => {},
-    clients: { claim: async () => {} },
+    clients: {
+      claim: async () => {},
+      matchAll: async () => [],
+      openWindow: async (url: string) => void opened.push(url),
+    },
   } as Record<string, unknown>;
   runInNewContext(readFileSync(path.resolve(__dirname, '../public/sw.js'), 'utf8'), {
     self,
@@ -120,5 +132,41 @@ describe('service worker', () => {
     const sw = loadServiceWorker(async () => new Response('x'));
     await sw.dispatch('message', { data: { type: 'cache-article', url: 'https://evil.test/' } });
     expect(sw.stores.get('saved-articles')).toBeUndefined();
+  });
+});
+
+describe('push notifications in the service worker', () => {
+  it('shows the notification and opens its article when tapped', async () => {
+    const sw = loadServiceWorker(async () => new Response('x'));
+    const payload = {
+      title: 'Извънредно: Срив',
+      body: 'Подробности',
+      url: '/bg/a/1/sriv',
+      tag: 'urgent-1',
+    };
+    await sw.dispatch('push', { data: { json: () => payload, text: () => '' } } as never);
+    const [shown] = sw.self.notifications as {
+      title: string;
+      options: { data: { url: string }; tag: string; renotify: boolean };
+    }[];
+    expect(shown).toMatchObject({
+      title: 'Извънредно: Срив',
+      options: { tag: 'urgent-1', renotify: true, data: { url: '/bg/a/1/sriv' } },
+    });
+
+    await sw.dispatch('notificationclick', {
+      notification: { close: () => {}, data: shown!.options.data },
+    } as never);
+    expect(sw.self.opened).toEqual(['https://news.test/bg/a/1/sriv']);
+  });
+
+  it('never opens an off-site URL from a push payload', async () => {
+    const sw = loadServiceWorker(async () => new Response('x'));
+    await sw.dispatch('push', {
+      data: { json: () => ({ title: 't', url: 'https://evil.test' }), text: () => '' },
+    } as never);
+    expect(
+      (sw.self.notifications as { options: { data: { url: string } } }[])[0]!.options.data.url,
+    ).toBe('/');
   });
 });

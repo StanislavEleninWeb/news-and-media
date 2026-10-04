@@ -102,6 +102,16 @@ export const envSchema = z
           .filter(Boolean),
       ),
 
+    // Notifications -----------------------------------------------------------
+    /** Web Push (VAPID) keys — generate once with `cli generate-vapid-keys`. */
+    VAPID_PUBLIC_KEY: optionalString,
+    VAPID_PRIVATE_KEY: optionalString,
+    VAPID_SUBJECT: optionalString,
+    /** Daily briefing send time (local hour) and time zone. */
+    DIGEST_HOUR: z.coerce.number().int().min(0).max(23).default(7),
+    DIGEST_TIMEZONE: z.string().default('Europe/Sofia'),
+    DIGEST_SIZE: z.coerce.number().int().min(3).max(20).default(8),
+
     // Media storage ---------------------------------------------------------
     STORAGE_LOCAL_DIR: z.string().default('./data/media'),
     MEDIA_BASE_URL: z.string().default('/media'),

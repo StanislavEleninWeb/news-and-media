@@ -114,6 +114,19 @@ const bg = {
     corrections: 'Корекции',
     correctionsHint: 'Промени в текста след публикуването му:',
   },
+  notifications: {
+    title: 'Известия',
+    urgent: 'Извънредни новини (push) по моите рубрики',
+    pushDigest: 'Дневен бюлетин като push известие',
+    emailDigest: 'Дневен бюлетин по имейл (сутрин)',
+    enablePush: 'Включи известията на това устройство',
+    pushEnabled: 'Известията на това устройство са включени.',
+    pushDenied: 'Известията са блокирани в браузъра. Разрешете ги от настройките на сайта.',
+    pushUnsupported:
+      'Този браузър не поддържа push известия. На iPhone първо добавете сайта към началния екран.',
+    pushUnavailable: 'Push известията още не са настроени на сървъра.',
+    disablePush: 'Изключи на това устройство',
+  },
   saved: {
     title: 'Запазени статии',
     empty: 'Още нямате запазени статии.',
@@ -246,6 +259,19 @@ const en: Messages = {
     credibilityLevels: ['', 'low', 'below average', 'average', 'high', 'very high'],
     corrections: 'Corrections',
     correctionsHint: 'Changes made to this text after publication:',
+  },
+  notifications: {
+    title: 'Notifications',
+    urgent: 'Breaking news (push) in my sections',
+    pushDigest: 'Daily briefing as a push notification',
+    emailDigest: 'Daily briefing by e-mail (morning)',
+    enablePush: 'Turn on notifications on this device',
+    pushEnabled: 'Notifications are on for this device.',
+    pushDenied: 'Notifications are blocked in your browser. Allow them in the site settings.',
+    pushUnsupported:
+      'This browser does not support push notifications. On iPhone, add the site to your Home Screen first.',
+    pushUnavailable: 'Push notifications are not set up on the server yet.',
+    disablePush: 'Turn off on this device',
   },
   saved: {
     title: 'Saved articles',

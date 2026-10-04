@@ -27,6 +27,11 @@ them. The API never calls an AI model at request time — it only reads PostgreS
 | GET | `/api/v1/me` | session | Current reader and followed topics/sources |
 | PUT | `/api/v1/me/preferences` `{topics?: slug[], sourceIds?: uuid[]}` | session | Replace followed topics/sources |
 | GET | `/api/v1/sources` | – | Outlets readers can follow |
+| GET | `/api/v1/me/notifications` | session | `{emailDigest, pushDigest, pushUrgent}` |
+| PUT | `/api/v1/me/notifications` | session | Change notification settings |
+| GET | `/api/v1/push/vapid-public-key` | – | Public VAPID key (or `null` when push is not configured) |
+| POST | `/api/v1/push/subscriptions` | session | Register this device's push subscription (https endpoints only) |
+| DELETE | `/api/v1/push/subscriptions` `{endpoint}` | session | Remove this device |
 | GET | `/api/health` | – | 200 when database (and search, if configured) are reachable; 503 otherwise |
 
 Conventions:

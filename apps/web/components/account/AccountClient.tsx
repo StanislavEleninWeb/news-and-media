@@ -7,6 +7,7 @@ import type { Locale } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
 import { api, ApiError } from '@/lib/client-api';
 import { useViewer } from '../ViewerProvider';
+import { NotificationSettings } from './NotificationSettings';
 
 type Option = { slug: string; name: string };
 type SourceOption = { id: string; name: string };
@@ -216,6 +217,7 @@ function Preferences({
           ) : null}
         </div>
       </form>
+      <NotificationSettings locale={locale} />
     </div>
   );
 }

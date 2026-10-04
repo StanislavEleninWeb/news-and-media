@@ -169,3 +169,22 @@ English-language newsroom UI for editors and admins (role on `users`; create the
 Admin actions that change what readers see revalidate the cached public pages immediately. Manual
 "run now" requests go through the PostgreSQL job queue (`jobs` table, `FOR UPDATE SKIP LOCKED`), which
 the worker polls every 5 s in every environment.
+
+## Notifications
+
+Self-hosted, no third-party notification service:
+
+* **Web push** via the standard Web Push protocol with VAPID keys (`web-push`), delivered by the
+  browser vendors' push services — works on Android, desktop browsers and iOS 16.4+ once the site is
+  added to the Home Screen. Readers turn it on per device in their account; expired subscriptions are
+  removed automatically. Generate keys once per environment with `cli generate-vapid-keys`; the public
+  key is served at runtime by `/api/v1/push/vapid-public-key`.
+* **Breaking news** — approving a story as urgent in the admin queues an `urgent_push` job; the worker
+  sends it (high urgency, one notification per story per device) to readers who allow urgent pushes and
+  follow one of the story's topics, or follow no topics at all.
+* **Daily briefing** — at `DIGEST_HOUR` (default 07:00 `Europe/Sofia`) the production schedule queues one
+  `digest` job per opted-in reader (exactly once per day); each gets the top `DIGEST_SIZE` stories of
+  the last 24 h from their personalised feed, by e-mail (HTML + text, `List-Unsubscribe`) and/or push.
+* **Safety net** — outside production nothing is delivered except to `NOTIFY_ALLOWLIST`.
+
+Operator commands: `cli send-digest --email <e>`, `cli test-push --email <e>`.
