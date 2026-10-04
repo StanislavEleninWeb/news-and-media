@@ -72,6 +72,13 @@ export const envSchema = z
     DEEPL_API_KEY: optionalString,
     DEEPL_API_URL: optionalString,
 
+    // Search ----------------------------------------------------------------
+    /** Typesense URL. When unset, search falls back to PostgreSQL (fine for development). */
+    TYPESENSE_URL: optionalString,
+    TYPESENSE_API_KEY: optionalString,
+    /** Namespaces collections per environment, e.g. "staging_articles". Defaults to "<APP_ENV>_". */
+    TYPESENSE_COLLECTION_PREFIX: optionalString,
+
     // Media storage ---------------------------------------------------------
     STORAGE_LOCAL_DIR: z.string().default('./data/media'),
     MEDIA_BASE_URL: z.string().default('/media'),
@@ -90,6 +97,7 @@ export const envSchema = z
       (env.DEEPL_API_KEY?.endsWith(':fx')
         ? 'https://api-free.deepl.com/v2'
         : 'https://api.deepl.com/v2'),
+    TYPESENSE_COLLECTION_PREFIX: env.TYPESENSE_COLLECTION_PREFIX ?? `${env.APP_ENV}_`,
     isProduction: env.APP_ENV === 'production',
   }))
   .superRefine((env, ctx) => {
@@ -99,6 +107,13 @@ export const envSchema = z
           code: z.ZodIssueCode.custom,
           path: ['DATABASE_URL'],
           message: 'DATABASE_URL is required outside development',
+        });
+      }
+      if (!env.TYPESENSE_URL || !env.TYPESENSE_API_KEY) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['TYPESENSE_URL'],
+          message: 'TYPESENSE_URL and TYPESENSE_API_KEY are required outside development',
         });
       }
       if (env.APP_URL.startsWith('http://localhost')) {

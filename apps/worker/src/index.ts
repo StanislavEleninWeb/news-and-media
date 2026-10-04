@@ -2,6 +2,8 @@ import { getConfig, getLogger } from '@nm/core';
 import { closeDb, getDb } from '@nm/db';
 import { createProcessDeps, processArticles } from '@nm/services/ai/process';
 import { createIngestDeps, runIngestion } from '@nm/services/ingestion/ingest';
+import { createTypesense } from '@nm/services/search/search';
+import { syncSearchIndex } from '@nm/services/search/sync';
 import { Scheduler } from './scheduler';
 
 const config = getConfig();
@@ -40,6 +42,23 @@ scheduler.register({
     if (summary.status === 'budget_exceeded') logger.error(summary, 'LLM budget exhausted');
   },
 });
+
+// Keeps Typesense in line with the database (new, edited and hidden articles).
+// Cheap and local, so it runs in every environment, schedules or not.
+const searchIndex = createTypesense(config);
+if (searchIndex) {
+  scheduler.register({
+    name: 'search-sync',
+    everyMs: 30_000,
+    automatic: false,
+    run: async () => {
+      const result = await syncSearchIndex(db, searchIndex);
+      if (result.indexed || result.removed) logger.info(result, 'search index synced');
+    },
+  });
+} else {
+  logger.warn('TYPESENSE_URL not set: search uses the PostgreSQL fallback');
+}
 
 logger.info({ scheduler: config.SCHEDULER_ENABLED, tasks: scheduler.taskNames }, 'worker started');
 

@@ -87,3 +87,16 @@ it only takes effect once that prefix exceeds the model's minimum cacheable leng
 **Switching provider** is configuration only: `LLM_PROVIDER=openai` with `OPENAI_COMPAT_*` uses any
 OpenAI-compatible API (DeepSeek, Groq, …), and `LLM_FALLBACK_PROVIDER` adds an automatic fallback
 when the primary is down. Operator commands: `cli process`, `cli reprocess <id>`, `cli llm-spend`.
+
+## Search
+
+Typesense holds one document per article **and locale** (`<id>_bg`, `<id>_en`) with title, TL;DR,
+body, topics, source and publish time; queries are filtered by locale (and optionally topic), ranked
+by relevance then recency, with typo tolerance and highlighted snippets. Collections are namespaced per
+environment (`TYPESENSE_COLLECTION_PREFIX`, default `<APP_ENV>_`).
+
+The worker's `search-sync` task (every 30 s, all environments) indexes newly published articles and
+re-indexes or removes articles whose `updated_at` is newer than `indexed_at` — so anything that edits
+an article only needs to touch the article row. `cli reindex` rebuilds a collection from PostgreSQL
+(new environment, schema change) without re-scraping. Without `TYPESENSE_URL`, the API falls back to a
+simple PostgreSQL search, which is enough for local development.

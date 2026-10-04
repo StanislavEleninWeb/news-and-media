@@ -15,8 +15,11 @@ describe('parseConfig', () => {
       APP_ENV: 'production',
       APP_URL: 'https://news.example.com',
       DATABASE_URL: 'postgres://u:p@db:5432/news',
+      TYPESENSE_URL: 'http://typesense:8108',
+      TYPESENSE_API_KEY: 'k',
     });
     expect(config.SCHEDULER_ENABLED).toBe(true);
+    expect(config.TYPESENSE_COLLECTION_PREFIX).toBe('production_');
   });
 
   it('lets an explicit flag override the default', () => {
@@ -26,6 +29,8 @@ describe('parseConfig', () => {
         APP_ENV: 'production',
         APP_URL: 'https://news.example.com',
         DATABASE_URL: 'postgres://x',
+        TYPESENSE_URL: 'http://typesense:8108',
+        TYPESENSE_API_KEY: 'k',
         SCHEDULER_ENABLED: 'false',
       }).SCHEDULER_ENABLED,
     ).toBe(false);
