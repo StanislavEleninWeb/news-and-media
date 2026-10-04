@@ -26,9 +26,9 @@ export function createDb(url: string, options: { max?: number } = {}) {
 /** Process-wide database handle, created on first use from DATABASE_URL. */
 export function getDb(): Db {
   if (!instance) {
-    const url = getConfig().DATABASE_URL;
-    if (!url) throw new Error('DATABASE_URL is not set');
-    instance = createDb(url);
+    const config = getConfig();
+    if (!config.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+    instance = createDb(config.DATABASE_URL, { max: config.DATABASE_POOL_MAX });
   }
   return instance.db;
 }

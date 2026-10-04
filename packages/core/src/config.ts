@@ -36,6 +36,8 @@ export const envSchema = z
     SCHEDULER_ENABLED: booleanFromEnv.optional(),
 
     DATABASE_URL: optionalString,
+    /** Connections per process (web and worker each have their own pool). */
+    DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
 
     // Ingestion -------------------------------------------------------------
     INGEST_USER_AGENT: optionalString,
