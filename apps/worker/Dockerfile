@@ -21,9 +21,10 @@ RUN pnpm --filter @nm/worker build
 
 FROM node:22-alpine AS runtime
 ARG GIT_SHA=dev
-ENV NODE_ENV=production GIT_SHA=${GIT_SHA}
+ENV NODE_ENV=production GIT_SHA=${GIT_SHA} MIGRATIONS_DIR=/app/migrations
 WORKDIR /app
 RUN echo '{"type":"module","private":true}' > package.json
 COPY --from=build --chown=node:node /repo/apps/worker/dist ./dist
+COPY --from=build --chown=node:node /repo/packages/db/migrations ./migrations
 USER node
 CMD ["node", "dist/index.js"]
