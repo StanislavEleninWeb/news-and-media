@@ -196,6 +196,37 @@ Self-hosted, no third-party notification service:
 
 Operator commands: `cli send-digest --email <e>`, `cli test-push --email <e>`.
 
+## Behavioural personalisation
+
+Opt-in only: web readers who chose "Accept all", app readers who switched on *Rank stories by what
+I read* (sent as `x-nm-consent: personalization`). Without consent nothing is recorded or used.
+
+* **Signals** (`engagement_events`): article opened (`click`), visible reading time (`dwell`, from
+  `visibilitychange`/`pagehide` via `sendBeacon`, capped at 10 min), `reaction`, `save`, `share`.
+  Clients post opens/dwell/shares to `/api/v1/events`; reactions and saves are recorded by the server.
+* **Profile** (`content/behavior.ts`): last 60 days, weights click 1 · dwell up to 3 (1 per 30 s) ·
+  reaction 3 · share 3 · save 4, halved every 14 days; normalised to 0–1 per topic and per source.
+* **Ranking** (`getFeed`): on top of followed topics/sources (+12 h), a graded lift of up to +8 h for
+  the reader's most-read topic and +4 h for the most-read source, and −6 h for stories opened in the
+  last 3 days. All bounded, so a fresh story always beats an old favourite.
+* **Privacy**: anonymous readers are keyed by the `nm_aid` id; withdrawing consent (or switching it off
+  in the app) calls `DELETE /api/v1/events`; the worker deletes events after
+  `ENGAGEMENT_RETENTION_DAYS` (90); account deletion cascades.
+
+## "Ask this article" chat
+
+`POST /api/v1/articles/:id/chat` — the only LLM call made at request time.
+
+* **Narrow context**: only that article's rewritten title, summary and body in the reader's language
+  go into the system prompt (cacheable per article). No corpus retrieval. The model must answer from
+  the article or reply `NOT_IN_ARTICLE`, which the API turns into a polite refusal (`refused: true`).
+  Article text is marked as data; instructions inside it are ignored.
+* **Cost control**: own key `CHAT_ANTHROPIC_API_KEY` (no fallback to the pipeline key), signed-in readers
+  only, `CHAT_MAX_PER_HOUR`/`CHAT_MAX_PER_DAY` counted in `llm_usage` (persistent), a 5/min burst
+  guard, `CHAT_MONTHLY_BUDGET_USD`, 500 output tokens, last 6 turns of history, 30 s timeout.
+  `llm_usage.purpose = 'chat'` with `user_id`; the pipeline budget excludes chat; the admin dashboard
+  shows both.
+
 ## Mobile app (`apps/mobile`)
 
 Expo SDK 57 / React Native, Expo Router. Screens: feed (topic chips, pull-to-refresh, infinite

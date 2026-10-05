@@ -43,6 +43,10 @@ export default async function Dashboard() {
             AI spend this month · {spendPct}% of ${d.llm.budgetUsd}
           </span>
         </div>
+        <div className="kpi">
+          <strong>${d.chat.spentUsd.toFixed(2)}</strong>
+          <span>Reader chat spend · budget ${d.chat.budgetUsd}</span>
+        </div>
       </div>
       <h2>Recent pipeline runs</h2>
       <div className="table-wrap">

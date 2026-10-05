@@ -23,8 +23,8 @@ const cookies = [
   [
     'nm_aid',
     {
-      bg: 'Анонимен идентификатор, за да запомним реакцията ви към статия.',
-      en: 'Anonymous id that remembers your reaction to an article.',
+      bg: 'Анонимен идентификатор, за да запомним реакцията ви към статия (и, със съгласие, какво четете).',
+      en: 'Anonymous id that remembers your reaction to an article (and, with consent, what you read).',
     },
   ],
   ['nm_consent', { bg: 'Запомня избора ви за бисквитките.', en: 'Remembers your cookie choice.' }],
@@ -64,6 +64,24 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
           {bg
             ? 'Ако приемете всички бисквитки, броим колко пъти е показана и кликната всяка реклама. Броят се само общи числа — без профил, без идентификатор и без данни за други сайтове.'
             : 'If you accept all cookies, we count how often each ad is shown and clicked. Only totals are kept — no profile, no identifier and nothing about other sites.'}
+        </p>
+        <h2 className="section-title" style={{ marginTop: '2rem' }}>
+          {bg
+            ? 'Персонализация по четене (само със съгласие)'
+            : 'Personalisation from your reading (only with consent)'}
+        </h2>
+        <p>
+          {bg
+            ? 'Ако приемете всички бисквитки (или включите персонализацията в приложението), записваме кои статии отваряте, колко време ги четете и на кои реагирате или запазвате. От тях подреждаме новините по темите и източниците, които четете най-често. Данните се използват само в този сайт, пазят се до 90 дни и се изтриват веднага, щом оттеглите съгласието си.'
+            : 'If you accept all cookies (or switch on personalisation in the app), we record which stories you open, how long you read them and which you react to or save. We use this only to rank news from the topics and sources you read most. It never leaves this site, is kept for up to 90 days and is deleted as soon as you withdraw consent.'}
+        </p>
+        <h2 className="section-title" style={{ marginTop: '2rem' }}>
+          {bg ? '„Попитай статията“' : '“Ask this article”'}
+        </h2>
+        <p>
+          {bg
+            ? 'Въпросите ви и текстът на статията се изпращат на доставчика на езиковия модел (Anthropic), за да се генерира отговор. Не пазим текста на разговорите — само броя въпроси за ограничаване на злоупотреби.'
+            : 'Your questions and the article text are sent to the language-model provider (Anthropic) to generate the answer. We do not keep the conversation text — only the number of questions, to prevent abuse.'}
         </p>
         <h2 className="section-title" style={{ marginTop: '2rem' }}>
           {bg ? 'Настройки на устройството' : 'On your device'}

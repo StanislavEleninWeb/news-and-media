@@ -74,6 +74,26 @@ export const envSchema = z
     DEEPL_API_KEY: optionalString,
     DEEPL_API_URL: optionalString,
 
+    // "Ask this article" chat — the only request-time LLM call ----------------
+    /**
+     * Its own provider key so its spend is metered (and can be revoked)
+     * separately from the ingestion pipeline. Chat is off until a key is set.
+     */
+    CHAT_LLM_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
+    CHAT_LLM_MODEL: z.string().default('claude-haiku-4-5-20251001'),
+    CHAT_ANTHROPIC_API_KEY: optionalString,
+    CHAT_OPENAI_COMPAT_API_KEY: optionalString,
+    CHAT_INPUT_PRICE_PER_MTOK: z.coerce.number().min(0).default(1),
+    CHAT_OUTPUT_PRICE_PER_MTOK: z.coerce.number().min(0).default(5),
+    CHAT_MONTHLY_BUDGET_USD: z.coerce.number().min(0).optional(),
+    /** Questions per signed-in reader. */
+    CHAT_MAX_PER_HOUR: z.coerce.number().int().min(1).default(20),
+    CHAT_MAX_PER_DAY: z.coerce.number().int().min(1).default(60),
+
+    // Behavioural personalisation -------------------------------------------
+    /** Days of reading signals kept for ranking; older events are deleted. */
+    ENGAGEMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(90),
+
     // Search ----------------------------------------------------------------
     /** Typesense URL. When unset, search falls back to PostgreSQL (fine for development). */
     TYPESENSE_URL: optionalString,
@@ -141,6 +161,7 @@ export const envSchema = z
     LLM_MAX_ARTICLES_PER_RUN:
       env.LLM_MAX_ARTICLES_PER_RUN ?? (env.APP_ENV === 'production' ? 50 : 5),
     LLM_MONTHLY_BUDGET_USD: env.LLM_MONTHLY_BUDGET_USD ?? (env.APP_ENV === 'production' ? 50 : 5),
+    CHAT_MONTHLY_BUDGET_USD: env.CHAT_MONTHLY_BUDGET_USD ?? (env.APP_ENV === 'production' ? 20 : 2),
     DEEPL_API_URL:
       env.DEEPL_API_URL ??
       (env.DEEPL_API_KEY?.endsWith(':fx')

@@ -36,6 +36,17 @@ const strings = {
     corrections: 'Корекции',
     reactions: 'Вашата реакция',
     noAccount: 'Нямате профил? Регистрирайте се на сайта.',
+    personalization: 'Персонализация',
+    personalizeOn: 'Подреждай новините според това, което чета',
+    personalizeNote:
+      'Записваме кои статии отваряте и колко време ги четете, само за подреждането на новините тук. Изключването изтрива историята.',
+    askTitle: 'Попитайте статията',
+    askIntro: 'Отговорите идват само от текста на тази статия.',
+    askPlaceholder: 'Вашият въпрос…',
+    askSend: 'Питай',
+    askSignIn: 'Влезте, за да задавате въпроси.',
+    askLimit: 'Достигнахте лимита за въпроси. Опитайте по-късно.',
+    askUnavailable: 'Функцията временно не е налична.',
   },
   en: {
     feed: 'News',
@@ -72,6 +83,17 @@ const strings = {
     corrections: 'Corrections',
     reactions: 'Your reaction',
     noAccount: 'No account? Register on the website.',
+    personalization: 'Personalisation',
+    personalizeOn: 'Rank stories by what I read',
+    personalizeNote:
+      'We record which stories you open and how long you read, only to rank the news here. Turning it off deletes the history.',
+    askTitle: 'Ask this article',
+    askIntro: 'Answers come only from the text of this article.',
+    askPlaceholder: 'Your question…',
+    askSend: 'Ask',
+    askSignIn: 'Sign in to ask questions.',
+    askLimit: "You've reached the question limit. Try again later.",
+    askUnavailable: 'This feature is temporarily unavailable.',
   },
 } as const;
 

@@ -32,6 +32,9 @@ them. The API never calls an AI model at request time — it only reads PostgreS
 | GET | `/api/v1/push/vapid-public-key` | – | Public VAPID key (or `null` when push is not configured) |
 | POST | `/api/v1/push/subscriptions` | session | Register this device's push subscription (https endpoints only) |
 | DELETE | `/api/v1/push/subscriptions` `{endpoint}` | session | Remove this device |
+| POST | `/api/v1/events` `{events:[{articleId, kind: click\|dwell\|share, dwellMs?}]}` | – | Reading signals (max 20). Stored only with consent (`nm_consent=all` or `x-nm-consent: personalization`); `text/plain` accepted for `sendBeacon` |
+| DELETE | `/api/v1/events` | – | Forget this reader's reading history |
+| POST | `/api/v1/articles/:id/chat` `{locale, question, history?}` | session | Ask this article → `{answer, refused}`. 429 quota, 503 `disabled`/`budget_exhausted`, 502 provider error |
 | POST | `/api/v1/auth/token` `{email, password}` | – | Mobile sign-in: `{token, expiresAt, user}` (no cookie). Use `Authorization: Bearer <token>` |
 | POST | `/api/v1/push/devices` `{token, platform}` | session | Register the app's Expo push token (`ios`/`android`) |
 | DELETE | `/api/v1/push/devices` `{token}` | session | Remove it (sign-out, push off) |

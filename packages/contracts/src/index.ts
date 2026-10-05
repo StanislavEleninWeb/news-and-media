@@ -172,3 +172,46 @@ export type DeviceTokenInput = z.infer<typeof deviceTokenInputSchema>;
 
 /** Data carried by every push (web and native) so a tap can open the story. */
 export const pushDataSchema = z.object({ url: z.string(), tag: z.string().optional() });
+
+// ---------------------------------------------------------------------------
+// Behavioural personalisation & "ask this article"
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /api/v1/events — reading signals from clients (reactions and saves are
+ * recorded by the server itself). Ignored unless the reader consented.
+ */
+export const engagementBatchSchema = z.object({
+  events: z
+    .array(
+      z.object({
+        articleId: z.string().uuid(),
+        kind: z.enum(['click', 'dwell', 'share']),
+        dwellMs: z.number().int().min(0).max(3_600_000).optional(),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+export type EngagementBatch = z.infer<typeof engagementBatchSchema>;
+
+/** Header native clients send when the reader allowed personalisation. */
+export const CONSENT_HEADER = 'x-nm-consent';
+
+export const chatRequestSchema = z.object({
+  locale: localeSchema,
+  question: z.string().trim().min(2).max(500),
+  /** Earlier turns, oldest first; the server keeps the last few. */
+  history: z
+    .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(2_000) }))
+    .max(20)
+    .default([]),
+});
+export type ChatRequest = z.input<typeof chatRequestSchema>;
+
+export const chatResponseSchema = z.object({
+  answer: z.string(),
+  /** True when the article does not cover the question (the model declined). */
+  refused: z.boolean(),
+});
+export type ChatResponse = z.infer<typeof chatResponseSchema>;

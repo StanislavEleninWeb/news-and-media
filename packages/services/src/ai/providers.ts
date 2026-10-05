@@ -4,8 +4,13 @@ export interface CompletionRequest {
   /** Stable instructions shared by every call of a kind — marked cacheable for the provider. */
   system: string;
   user: string;
+  /** Earlier turns of a conversation, oldest first (sent before `user`). */
+  history?: { role: 'user' | 'assistant'; content: string }[];
   maxTokens: number;
   temperature?: number;
+  /** Request-time calls (reader chat) fail fast instead of retrying for minutes. */
+  timeoutMs?: number;
+  retries?: number;
 }
 
 export interface CompletionUsage {
@@ -104,11 +109,11 @@ export class AnthropicProvider implements LlmProvider {
         temperature: request.temperature ?? 0.4,
         // Caching only takes effect once the shared prefix exceeds the model's minimum length.
         system: [{ type: 'text', text: request.system, cache_control: { type: 'ephemeral' } }],
-        messages: [{ role: 'user', content: request.user }],
+        messages: [...(request.history ?? []), { role: 'user', content: request.user }],
       },
       {
-        timeoutMs: this.options.timeoutMs ?? 120_000,
-        retries: this.options.retries ?? 3,
+        timeoutMs: request.timeoutMs ?? this.options.timeoutMs ?? 120_000,
+        retries: request.retries ?? this.options.retries ?? 3,
         baseDelayMs: this.options.retryBaseDelayMs ?? 2_000,
       },
     )) as {
@@ -162,12 +167,13 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         temperature: request.temperature ?? 0.4,
         messages: [
           { role: 'system', content: request.system },
+          ...(request.history ?? []),
           { role: 'user', content: request.user },
         ],
       },
       {
-        timeoutMs: this.options.timeoutMs ?? 120_000,
-        retries: this.options.retries ?? 3,
+        timeoutMs: request.timeoutMs ?? this.options.timeoutMs ?? 120_000,
+        retries: request.retries ?? this.options.retries ?? 3,
         baseDelayMs: this.options.retryBaseDelayMs ?? 2_000,
       },
     )) as {
@@ -283,4 +289,34 @@ export function createProvider(
     buildProvider(config.LLM_FALLBACK_PROVIDER, config, false),
     onFallback,
   );
+}
+
+/**
+ * Provider for the reader-facing "ask this article" chat. Deliberately uses its
+ * own key (CHAT_ANTHROPIC_API_KEY / CHAT_OPENAI_COMPAT_API_KEY) and never falls
+ * back to the pipeline key, so chat spend is metered and capped on its own.
+ * Returns null when chat is not configured.
+ */
+export function createChatProvider(config: AppConfig): LlmProvider | null {
+  const prices = {
+    input: config.CHAT_INPUT_PRICE_PER_MTOK,
+    output: config.CHAT_OUTPUT_PRICE_PER_MTOK,
+    cacheRead: config.CHAT_INPUT_PRICE_PER_MTOK / 10,
+  };
+  if (config.CHAT_LLM_PROVIDER === 'anthropic') {
+    if (!config.CHAT_ANTHROPIC_API_KEY) return null;
+    return new AnthropicProvider({
+      apiKey: config.CHAT_ANTHROPIC_API_KEY,
+      baseUrl: config.ANTHROPIC_BASE_URL,
+      model: config.CHAT_LLM_MODEL,
+      prices,
+    });
+  }
+  if (!config.CHAT_OPENAI_COMPAT_API_KEY || !config.OPENAI_COMPAT_BASE_URL) return null;
+  return new OpenAiCompatibleProvider({
+    apiKey: config.CHAT_OPENAI_COMPAT_API_KEY,
+    baseUrl: config.OPENAI_COMPAT_BASE_URL,
+    model: config.CHAT_LLM_MODEL,
+    prices,
+  });
 }

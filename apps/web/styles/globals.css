@@ -1012,3 +1012,82 @@ mark {
   gap: 0.5rem;
   justify-content: flex-end;
 }
+
+/* "Ask this article" ------------------------------------------------------- */
+.chat {
+  margin-top: 1.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+}
+.chat__toggle {
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 1rem;
+  font: 700 var(--step-0) / 1.3 var(--sans);
+  color: var(--ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.chat__toggle::after {
+  content: '＋';
+  float: right;
+  color: var(--muted);
+}
+.chat__toggle[aria-expanded='true']::after {
+  content: '－';
+}
+.chat__panel {
+  padding: 0 1rem 1rem;
+  font-family: var(--sans);
+}
+.chat__intro {
+  color: var(--muted);
+  font-size: var(--step--1);
+  margin: 0 0 0.75rem;
+}
+.chat__log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.chat__turn {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+  line-height: 1.5;
+  max-width: 90%;
+}
+.chat__turn--user {
+  justify-self: end;
+  background: var(--brand);
+  color: var(--paper);
+}
+.chat__turn--assistant {
+  background: var(--chip);
+  color: var(--ink);
+}
+.chat__turn--refused {
+  color: var(--muted);
+  font-style: italic;
+}
+.chat__error {
+  color: var(--accent);
+}
+.chat__form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.chat__form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}

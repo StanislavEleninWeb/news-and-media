@@ -7,6 +7,7 @@ import { getArticle } from '@nm/services/content/article';
 import { AdSlot } from '@/components/AdSlot';
 import { ArticleCard } from '@/components/ArticleCard';
 import { ArticleActions } from '@/components/article/ArticleActionsBar';
+import { ArticleChat } from '@/components/article/ArticleChat';
 import { Reactions } from '@/components/article/ArticleActions';
 import { TrustPanel } from '@/components/article/TrustPanel';
 import { ViewBeacon } from '@/components/ViewBeacon';
@@ -177,6 +178,8 @@ export default async function ArticlePage({ params }: Props) {
         </div>
 
         <Reactions articleId={article.id} locale={locale} />
+
+        <ArticleChat articleId={article.id} locale={locale} />
 
         <div id="transparency">
           <TrustPanel article={article} locale={locale} />

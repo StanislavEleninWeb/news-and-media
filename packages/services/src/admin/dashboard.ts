@@ -7,13 +7,15 @@ import { pendingJobCount } from '../jobs/queue';
 import { failingSourceCount } from './sources';
 
 export async function getDashboard(db: Db) {
-  const [statusCounts, recentRuns, spend, pendingJobs, failingSources] = await Promise.all([
-    db.select({ status: articles.status, n: count() }).from(articles).groupBy(articles.status),
-    db.select().from(pipelineRuns).orderBy(desc(pipelineRuns.startedAt)).limit(8),
-    monthToDateSpend(db),
-    pendingJobCount(db),
-    failingSourceCount(db),
-  ]);
+  const [statusCounts, recentRuns, spend, chatSpend, pendingJobs, failingSources] =
+    await Promise.all([
+      db.select({ status: articles.status, n: count() }).from(articles).groupBy(articles.status),
+      db.select().from(pipelineRuns).orderBy(desc(pipelineRuns.startedAt)).limit(8),
+      monthToDateSpend(db),
+      monthToDateSpend(db, new Date(), 'chat'),
+      pendingJobCount(db),
+      failingSourceCount(db),
+    ]);
   const [today] = await db
     .select({ n: count() })
     .from(articles)
@@ -28,6 +30,7 @@ export async function getDashboard(db: Db) {
     publishedLast24h: today?.n ?? 0,
     recentRuns,
     llm: { spentUsd: spend, budgetUsd: getConfig().LLM_MONTHLY_BUDGET_USD },
+    chat: { spentUsd: chatSpend, budgetUsd: getConfig().CHAT_MONTHLY_BUDGET_USD },
     pendingJobs,
     failingSources,
   };

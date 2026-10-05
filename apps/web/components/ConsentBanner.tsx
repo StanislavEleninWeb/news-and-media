@@ -7,14 +7,14 @@ import { CONSENT_EVENT, readConsent, writeConsent } from '@/lib/consent';
 
 const text = {
   bg: {
-    body: 'Използваме само необходимите бисквитки, за да работи сайтът. С ваше съгласие броим и показванията и кликовете на рекламите (без проследяване между сайтове).',
+    body: 'Използваме само необходимите бисквитки, за да работи сайтът. С ваше съгласие подреждаме новините според това, което четете, и броим показванията и кликовете на рекламите (без проследяване между сайтове).',
     accept: 'Приемам всички',
     necessary: 'Само необходимите',
     more: 'Повече',
     settings: 'Настройки за бисквитки',
   },
   en: {
-    body: 'We only use the cookies the site needs to work. With your consent we also count ad views and clicks (no cross-site tracking).',
+    body: 'We only use the cookies the site needs to work. With your consent we also rank stories by what you read and count ad views and clicks (no cross-site tracking).',
     accept: 'Accept all',
     necessary: 'Necessary only',
     more: 'Learn more',

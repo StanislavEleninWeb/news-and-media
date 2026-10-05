@@ -7,13 +7,16 @@ import { z } from 'zod';
 import {
   articleDetailSchema,
   authTokenResponseSchema,
+  chatResponseSchema,
   feedResponseSchema,
   meResponseSchema,
   reactionSummarySchema,
   savedResponseSchema,
   searchResponseSchema,
   topicsResponseSchema,
+  type ChatRequest,
   type DeviceTokenInput,
+  type EngagementBatch,
   type Reaction,
 } from '@nm/contracts';
 
@@ -36,6 +39,8 @@ export interface ApiOptions {
   anonId: () => string | null;
   /** Internal builds only: passes the staging basic-auth gate. */
   stagingKey?: string;
+  /** The reader allowed reading-based personalisation (sent as x-nm-consent). */
+  personalization?: () => boolean;
   fetchImpl?: typeof fetch;
 }
 
@@ -53,6 +58,7 @@ export function createApi(options: ApiOptions) {
     const anon = options.anonId();
     if (anon) headers['X-NM-Anon-Id'] = anon;
     if (options.stagingKey) headers['X-Staging-Key'] = options.stagingKey;
+    if (options.personalization?.()) headers['X-NM-Consent'] = 'personalization';
     if (init.body !== undefined) headers['Content-Type'] = 'application/json';
     const response = await doFetch(`${base}${path}`, {
       method: init.method ?? 'GET',
@@ -131,6 +137,16 @@ export function createApi(options: ApiOptions) {
     save: (id: string) => call(`/api/v1/me/saved/${encodeURIComponent(id)}`, { method: 'PUT' }),
     unsave: (id: string) =>
       call(`/api/v1/me/saved/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+    sendEvents: (events: EngagementBatch['events']) =>
+      call('/api/v1/events', { method: 'POST', body: { events } }),
+    forgetEvents: () => call('/api/v1/events', { method: 'DELETE' }),
+    ask: (id: string, body: ChatRequest) =>
+      call(`/api/v1/articles/${encodeURIComponent(id)}/chat`, {
+        method: 'POST',
+        body,
+        schema: chatResponseSchema,
+      }),
 
     registerDevice: (input: DeviceTokenInput) =>
       call('/api/v1/push/devices', { method: 'POST', body: input }),

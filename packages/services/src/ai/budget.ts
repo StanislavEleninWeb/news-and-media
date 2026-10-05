@@ -1,4 +1,4 @@
-import { gte, sum } from 'drizzle-orm';
+import { and, eq, gte, ne, sum } from 'drizzle-orm';
 import type { Db } from '@nm/db';
 import { llmUsage } from '@nm/db/schema';
 import type { CompletionResult } from './providers';
@@ -17,23 +17,36 @@ export function startOfMonthUtc(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
-/** LLM spend so far this calendar month (UTC). */
-export async function monthToDateSpend(db: Db, now = new Date()): Promise<number> {
+/**
+ * LLM spend so far this calendar month (UTC). The pipeline (rewrite, translate)
+ * and the reader-facing chat have separate keys and separate budgets.
+ */
+export async function monthToDateSpend(
+  db: Db,
+  now = new Date(),
+  scope: 'pipeline' | 'chat' = 'pipeline',
+): Promise<number> {
   const [row] = await db
     .select({ total: sum(llmUsage.costUsd) })
     .from(llmUsage)
-    .where(gte(llmUsage.createdAt, startOfMonthUtc(now)));
+    .where(
+      and(
+        gte(llmUsage.createdAt, startOfMonthUtc(now)),
+        scope === 'chat' ? eq(llmUsage.purpose, 'chat') : ne(llmUsage.purpose, 'chat'),
+      ),
+    );
   return Number(row?.total ?? 0);
 }
 
 export async function recordUsage(
   db: Db,
   result: CompletionResult,
-  meta: { articleId: string | null; purpose: 'rewrite' | 'translate' | 'chat' },
+  meta: { articleId: string | null; purpose: 'rewrite' | 'translate' | 'chat'; userId?: string },
 ): Promise<number> {
   const cost = costUsd(result);
   await db.insert(llmUsage).values({
     articleId: meta.articleId,
+    userId: meta.userId ?? null,
     purpose: meta.purpose,
     provider: result.provider,
     model: result.model,

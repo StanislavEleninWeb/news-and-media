@@ -352,6 +352,35 @@ export const articleViewBuckets = pgTable(
   ],
 );
 
+export const engagementKinds = ['click', 'dwell', 'reaction', 'save', 'share'] as const;
+export const engagementKindEnum = pgEnum('engagement_kind', engagementKinds);
+export type EngagementKind = (typeof engagementKinds)[number];
+
+/**
+ * Behavioural signals for feed ranking (only recorded with the reader's
+ * consent). `actor_key` is "u:<user id>" or "a:<anonymous install id>".
+ * Pruned after ENGAGEMENT_RETENTION_DAYS by the worker.
+ */
+export const engagementEvents = pgTable(
+  'engagement_events',
+  {
+    id: bigserial('id', { mode: 'number' }).primaryKey(),
+    actorKey: text('actor_key').notNull(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    articleId: uuid('article_id')
+      .notNull()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    kind: engagementKindEnum('kind').notNull(),
+    /** Reading time for "dwell" events, milliseconds (capped). */
+    dwellMs: integer('dwell_ms'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('engagement_actor_idx').on(t.actorKey, t.createdAt),
+    index('engagement_created_idx').on(t.createdAt),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
@@ -489,6 +518,8 @@ export const llmUsage = pgTable(
   {
     id: bigserial('id', { mode: 'number' }).primaryKey(),
     articleId: uuid('article_id').references(() => articles.id, { onDelete: 'set null' }),
+    /** The reader who triggered a request-time call ("ask this article"); null for the pipeline. */
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     purpose: text('purpose').notNull(),
     provider: text('provider').notNull(),
     model: text('model').notNull(),
@@ -498,7 +529,10 @@ export const llmUsage = pgTable(
     costUsd: numeric('cost_usd', { precision: 12, scale: 6, mode: 'number' }).notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('llm_usage_created_idx').on(t.createdAt)],
+  (t) => [
+    index('llm_usage_created_idx').on(t.createdAt),
+    index('llm_usage_user_idx').on(t.userId, t.createdAt),
+  ],
 );
 
 /** Small key/value store for operational state (worker heartbeat, alert throttling). */

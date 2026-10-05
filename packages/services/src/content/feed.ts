@@ -2,6 +2,7 @@ import { and, desc, eq, exists, inArray, sql, type SQL } from 'drizzle-orm';
 import type { Db } from '@nm/db';
 import { articleLocalizations, articles, articleTopics, topics, type Locale } from '@nm/db/schema';
 import { loadCards } from './cards';
+import { isEmptyProfile, type BehaviorProfile } from './behavior';
 import type { FeedResponse } from './contracts';
 
 export interface FeedPersonalization {
@@ -16,16 +17,27 @@ export interface FeedQuery {
   page?: number;
   perPage?: number;
   personalization?: FeedPersonalization | null;
+  /** Reading-behaviour profile (only for readers who consented). */
+  behavior?: BehaviorProfile | null;
   now?: Date;
 }
 
 /** How far ahead (in recency) a story matching the reader's topics/sources is ranked. */
 export const PREFERENCE_BOOST_HOURS = 12;
+/** Maximum lift from reading behaviour: strongest topic / strongest source. */
+export const BEHAVIOR_TOPIC_BOOST_HOURS = 8;
+export const BEHAVIOR_SOURCE_BOOST_HOURS = 4;
+/** Stories the reader already opened recently sink by this much. */
+export const SEEN_PENALTY_HOURS = 6;
 
 /**
  * The home/topic feed: approved urgent stories first, then newest first —
  * with stories from the reader's followed topics and sources lifted by
- * PREFERENCE_BOOST_HOURS so they rank above equally fresh ones.
+ * PREFERENCE_BOOST_HOURS so they rank above equally fresh ones, and (with
+ * consent) a smaller, graded lift from what they actually read: up to
+ * BEHAVIOR_TOPIC_BOOST_HOURS for their most-read topic, BEHAVIOR_SOURCE_BOOST_HOURS
+ * for their most-read source, minus SEEN_PENALTY_HOURS for stories already opened.
+ * Every boost is bounded, so fresh news always wins over old favourites.
  */
 export async function getFeed(db: Db, query: FeedQuery): Promise<FeedResponse> {
   const page = Math.max(1, Math.floor(query.page ?? 1));
@@ -76,6 +88,43 @@ export async function getFeed(db: Db, query: FeedQuery): Promise<FeedResponse> {
     rankTime = sql`${articles.publishedAt} + case when (${preferred}) then interval '${sql.raw(String(PREFERENCE_BOOST_HOURS))} hours' else interval '0 hours' end`;
   }
 
+  const behavior = query.behavior;
+  const behavioral = !isEmptyProfile(behavior);
+  if (behavior && behavioral) {
+    const parts: SQL[] = [];
+    const topicEntries = Object.entries(behavior.topics);
+    if (topicEntries.length) {
+      const weights = sql.join(
+        topicEntries.map(([id, w]) => sql`(${id}::uuid, ${w}::float8)`),
+        sql`, `,
+      );
+      parts.push(
+        sql`${BEHAVIOR_TOPIC_BOOST_HOURS}::float8 * coalesce((select max(w.weight) from ${articleTopics} join (values ${weights}) as w(topic_id, weight) on w.topic_id = ${articleTopics.topicId} where ${articleTopics.articleId} = ${articles.id}), 0)`,
+      );
+    }
+    const sourceEntries = Object.entries(behavior.sources);
+    if (sourceEntries.length) {
+      const cases = sql.join(
+        sourceEntries.map(([id, w]) => sql`when ${id}::uuid then ${w}::float8`),
+        sql` `,
+      );
+      parts.push(
+        sql`${BEHAVIOR_SOURCE_BOOST_HOURS}::float8 * (case ${articles.sourceId} ${cases} else 0 end)`,
+      );
+    }
+    if (behavior.seen.length) {
+      const seen = sql.join(
+        behavior.seen.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      );
+      parts.push(
+        sql`(case when ${articles.id} in (${seen}) then -${SEEN_PENALTY_HOURS}::float8 else 0 end)`,
+      );
+    }
+    if (parts.length)
+      rankTime = sql`${rankTime} + interval '1 hour' * (${sql.join(parts, sql` + `)})`;
+  }
+
   const rows = await db
     .select({ id: articles.id })
     .from(articles)
@@ -97,6 +146,6 @@ export async function getFeed(db: Db, query: FeedQuery): Promise<FeedResponse> {
     page,
     perPage,
     hasMore: rows.length > perPage,
-    personalized,
+    personalized: personalized || behavioral,
   };
 }
