@@ -11,6 +11,7 @@ import { createIngestDeps, runIngestion } from '@nm/services/ingestion/ingest';
 import { runDueJobs, type JobHandlers } from '@nm/services/jobs/queue';
 import { scheduleDigests, sendDigest, sendUrgentPush } from '@nm/services/notifications/fanout';
 import { createPushChannels } from '@nm/services/notifications/push';
+import { pruneEngagement } from '@nm/services/content/behavior';
 import { createAlertTransport, evaluatePipelineHealth, raiseAlert } from '@nm/services/ops/alerts';
 import { writeHeartbeat } from '@nm/services/ops/heartbeat';
 import { createTypesense } from '@nm/services/search/search';
@@ -108,6 +109,17 @@ const jobHandlers: JobHandlers = {
     logger.debug({ userId: job.payload.userId, ...result }, 'digest processed');
   },
 };
+
+// Reading signals for personalisation are kept ENGAGEMENT_RETENTION_DAYS, then deleted.
+scheduler.register({
+  name: 'prune-engagement',
+  everyMs: 6 * 3_600_000,
+  automatic: false,
+  run: async () => {
+    const deleted = await pruneEngagement(db, config.ENGAGEMENT_RETENTION_DAYS);
+    if (deleted) logger.info({ deleted }, 'old engagement events pruned');
+  },
+});
 
 // Daily briefing: at DIGEST_HOUR local time, one digest job per opted-in reader (production schedule).
 scheduler.register({

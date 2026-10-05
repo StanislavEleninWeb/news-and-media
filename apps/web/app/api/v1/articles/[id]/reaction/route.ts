@@ -7,7 +7,9 @@ import {
   removeReaction,
   setReaction,
 } from '@nm/services/content/engagement';
+import { recordEngagement } from '@nm/services/content/behavior';
 import { idParam } from '@/lib/api-schemas';
+import { hasPersonalizationConsent } from '@/lib/consent';
 import { clientIp, json, parseBody, problem, rejectCrossSite } from '@/lib/http';
 import { rateLimit } from '@/lib/rate-limit';
 import { getViewer } from '@/lib/viewer';
@@ -40,6 +42,10 @@ export async function PUT(request: Request, context: Context) {
   if (body instanceof Response) return body;
   const viewer = await getViewer(request, { createAnonymousId: true });
   await setReaction(getDb(), id, viewer.actorKey, body.reaction);
+  if (hasPersonalizationConsent(request))
+    await recordEngagement(getDb(), { actorKey: viewer.actorKey, userId: viewer.user?.id }, [
+      { articleId: id, kind: 'reaction' },
+    ]);
   return json(await getReactionSummary(getDb(), id, viewer.actorKey), { cookies: viewer.cookies });
 }
 

@@ -18,7 +18,8 @@ import { radius, space, usePalette } from '@/theme';
 
 export default function AccountScreen() {
   const c = usePalette();
-  const { api, locale, setLocale, user, signIn, signOut } = useSession();
+  const { api, locale, setLocale, user, signIn, signOut, personalize, setPersonalize } =
+    useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +73,19 @@ export default function AccountScreen() {
           <Chip label="Български" active={locale === 'bg'} onPress={() => setLocale('bg')} />
           <Chip label="English" active={locale === 'en'} onPress={() => setLocale('en')} />
         </View>
+
+        <Text style={[styles.heading, { color: c.muted }]}>{t(locale, 'personalization')}</Text>
+        <View style={[styles.setting, { borderColor: c.rule }]}>
+          <Text style={[styles.settingLabel, { color: c.ink }]}>{t(locale, 'personalizeOn')}</Text>
+          <Switch
+            value={personalize}
+            onValueChange={setPersonalize}
+            trackColor={{ true: c.accent }}
+          />
+        </View>
+        <Text style={{ color: c.muted, fontSize: 13, lineHeight: 18 }}>
+          {t(locale, 'personalizeNote')}
+        </Text>
 
         {user ? (
           <>

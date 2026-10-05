@@ -104,6 +104,20 @@ const bg = {
       angry: 'Ядосващо',
     },
   },
+  chat: {
+    title: 'Попитайте статията',
+    intro: 'Отговорите идват само от текста на тази статия.',
+    placeholder: 'Например: Кога влизат в сила промените?',
+    ask: 'Питай',
+    signIn: 'Влезте, за да задавате въпроси за статията.',
+    thinking: 'Мисля…',
+    errors: {
+      rate_limited: 'Достигнахте лимита за въпроси. Опитайте по-късно.',
+      disabled: 'Функцията временно не е налична.',
+      budget_exhausted: 'Функцията временно не е налична.',
+      generic: 'Нещо се обърка. Опитайте отново.',
+    },
+  },
   trust: {
     aiLabel: 'Пренаписано с ИИ',
     aiDisclosure: (source: string) =>
@@ -248,6 +262,20 @@ const en: Messages = {
       surprising: 'Surprising',
       sad: 'Sad',
       angry: 'Angry',
+    },
+  },
+  chat: {
+    title: 'Ask this article',
+    intro: 'Answers come only from the text of this article.',
+    placeholder: 'For example: When do the changes take effect?',
+    ask: 'Ask',
+    signIn: 'Sign in to ask questions about this article.',
+    thinking: 'Thinking…',
+    errors: {
+      rate_limited: "You've reached the question limit. Try again later.",
+      disabled: 'This feature is temporarily unavailable.',
+      budget_exhausted: 'This feature is temporarily unavailable.',
+      generic: 'Something went wrong. Please try again.',
     },
   },
   trust: {

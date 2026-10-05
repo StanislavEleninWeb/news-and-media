@@ -15,6 +15,13 @@
       "when": 1791160470333,
       "tag": "0001_native_push",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791179280147,
+      "tag": "0002_engagement_and_chat",
+      "breakpoints": true
     }
   ]
 }

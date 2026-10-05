@@ -16,7 +16,12 @@ import { createApi, type Api, type Locale } from './api';
 import { env } from './env';
 import { unregisterPush } from './push';
 
-const KEYS = { token: 'nm.session', anon: 'nm.anon', locale: 'nm.locale' } as const;
+const KEYS = {
+  token: 'nm.session',
+  anon: 'nm.anon',
+  locale: 'nm.locale',
+  personalize: 'nm.personalize',
+} as const;
 
 interface Session {
   ready: boolean;
@@ -24,6 +29,9 @@ interface Session {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   user: SessionUserDto | null;
+  /** Reading-based personalisation (opt-in; off deletes the history on the server). */
+  personalize: boolean;
+  setPersonalize: (on: boolean) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -39,6 +47,8 @@ const deviceLocale = (): Locale => (getLocales()[0]?.languageCode === 'bg' ? 'bg
 export function SessionProvider({ children }: { children: ReactNode }) {
   const token = useRef<string | null>(null);
   const anon = useRef<string | null>(null);
+  const personalizeRef = useRef(false);
+  const [personalize, setPersonalizeState] = useState(false);
   const [ready, setReady] = useState(false);
   const [locale, setLocaleState] = useState<Locale>(deviceLocale);
   const [user, setUser] = useState<SessionUserDto | null>(null);
@@ -50,6 +60,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         stagingKey: env.stagingKey,
         getToken: () => token.current,
         anonId: () => anon.current,
+        personalization: () => personalizeRef.current,
       }),
     [],
   );
@@ -57,11 +68,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [storedToken, storedAnon, storedLocale] = await Promise.all([
+      const [storedToken, storedAnon, storedLocale, storedPersonalize] = await Promise.all([
         SecureStore.getItemAsync(KEYS.token),
         SecureStore.getItemAsync(KEYS.anon),
         SecureStore.getItemAsync(KEYS.locale),
+        SecureStore.getItemAsync(KEYS.personalize),
       ]);
+      personalizeRef.current = storedPersonalize === 'on';
+      setPersonalizeState(personalizeRef.current);
       anon.current = storedAnon ?? randomUUID();
       if (!storedAnon) await SecureStore.setItemAsync(KEYS.anon, anon.current);
       if (storedLocale === 'bg' || storedLocale === 'en') setLocaleState(storedLocale);
@@ -88,6 +102,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void SecureStore.setItemAsync(KEYS.locale, next);
   }, []);
 
+  const setPersonalize = useCallback(
+    async (on: boolean) => {
+      personalizeRef.current = on;
+      setPersonalizeState(on);
+      await SecureStore.setItemAsync(KEYS.personalize, on ? 'on' : 'off');
+      if (!on) await api.forgetEvents().catch(() => undefined);
+    },
+    [api],
+  );
+
   const signIn = useCallback(
     async (email: string, password: string) => {
       const result = await api.signIn(email.trim(), password);
@@ -111,8 +135,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [api]);
 
   const value = useMemo(
-    () => ({ ready, api, locale, setLocale, user, signIn, signOut }),
-    [ready, api, locale, setLocale, user, signIn, signOut],
+    () => ({ ready, api, locale, setLocale, user, personalize, setPersonalize, signIn, signOut }),
+    [ready, api, locale, setLocale, user, personalize, setPersonalize, signIn, signOut],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

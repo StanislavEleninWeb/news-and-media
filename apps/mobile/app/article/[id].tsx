@@ -2,11 +2,12 @@ import type { ArticleDetail } from '@nm/contracts';
 import { Image } from 'expo-image';
 import { Link, Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Locale } from '@/api';
 import { ArticleCard } from '@/components/ArticleCard';
+import { ArticleChat } from '@/components/ArticleChat';
 import { Reactions } from '@/components/Reactions';
 import { ErrorState, Loading } from '@/components/ui';
 import { env } from '@/env';
@@ -18,7 +19,7 @@ export default function ArticleScreen() {
   const c = usePalette();
   const params = useLocalSearchParams<{ id: string; locale?: string }>();
   const session = useSession();
-  const { api, user } = session;
+  const { api, user, personalize } = session;
   const locale: Locale =
     params.locale === 'en' || params.locale === 'bg' ? params.locale : session.locale;
   const [article, setArticle] = useState<ArticleDetail | null>(null);
@@ -36,6 +37,23 @@ export default function ArticleScreen() {
     );
   }, [api, params.id, locale]);
   useEffect(load, [load]);
+
+  // Reading signals for personalisation (opt-in): the open, then reading time on leave.
+  const openedAt = useRef(0);
+  useEffect(() => {
+    if (!personalize || !article) return;
+    openedAt.current = Date.now();
+    void api.sendEvents([{ articleId: article.id, kind: 'click' }]).catch(() => undefined);
+    return () => {
+      const dwellMs = Date.now() - openedAt.current;
+      if (dwellMs >= 3_000)
+        void api
+          .sendEvents([
+            { articleId: article.id, kind: 'dwell', dwellMs: Math.min(dwellMs, 3_600_000) },
+          ])
+          .catch(() => undefined);
+    };
+  }, [api, personalize, article]);
 
   useEffect(() => {
     if (!user) return;
@@ -72,7 +90,13 @@ export default function ArticleScreen() {
       <Pressable
         accessibilityLabel="Share"
         hitSlop={8}
-        onPress={() => Share.share({ message: `${article.title}\n${env.apiUrl}${article.path}` })}
+        onPress={async () => {
+          const result = await Share.share({
+            message: `${article.title}\n${env.apiUrl}${article.path}`,
+          });
+          if (personalize && result.action === Share.sharedAction)
+            void api.sendEvents([{ articleId: article.id, kind: 'share' }]).catch(() => undefined);
+        }}
       >
         <Ionicons name="share-outline" size={22} color={c.ink} />
       </Pressable>
@@ -155,6 +179,8 @@ export default function ArticleScreen() {
       ) : null}
 
       <Reactions articleId={article.id} />
+
+      <ArticleChat articleId={article.id} locale={locale} />
 
       {article.related.length ? (
         <View style={styles.section}>
