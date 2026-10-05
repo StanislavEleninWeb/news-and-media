@@ -10,3 +10,6 @@
 data
 docs
 *.md
+# The mobile app is built by EAS, not Docker; only its manifest is needed (pnpm lockfile check).
+apps/mobile/*
+!apps/mobile/package.json

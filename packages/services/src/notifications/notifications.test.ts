@@ -2,7 +2,14 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { resetConfig } from '@nm/core/config';
 import type { Db } from '@nm/db';
-import { jobs, pushSubscriptions, topics, userTopicPreferences, users } from '@nm/db/schema';
+import {
+  devicePushTokens,
+  jobs,
+  pushSubscriptions,
+  topics,
+  userTopicPreferences,
+  users,
+} from '@nm/db/schema';
 import { seedTopics } from '@nm/db/seed';
 import { createTestDb } from '@nm/db/testing';
 import { approveUrgent } from '../admin/articles';
@@ -11,7 +18,14 @@ import { createPublishedArticle, createSource } from '../testing/content';
 import { renderDigestEmail } from './digest-email';
 import { localClock, scheduleDigests, sendDigest, sendUrgentPush } from './fanout';
 import { setNotificationSettings } from './preferences';
-import { pushToUser, savePushSubscription, type PushSender } from './push';
+import {
+  createExpoPushSender,
+  saveDeviceToken,
+  type NativePushMessage,
+  type NativePushSender,
+} from './native-push';
+import { pushToUser, savePushSubscription, type PushChannels, type PushSender } from './push';
+import { envSchema } from '@nm/core/config';
 
 let db: Db;
 let close: () => Promise<void>;
@@ -24,10 +38,25 @@ const sender: PushSender = async (subscription, payload, urgency) => {
   deliveries.push({ endpoint: subscription.endpoint, payload: JSON.parse(payload), urgency });
   return 201;
 };
+const nativeDeliveries: NativePushMessage[] = [];
+const nativeSender: NativePushSender = async (messages) =>
+  messages.map((m) => {
+    if (m.token.includes('Gone'))
+      return { ok: false, unregistered: true, error: 'DeviceNotRegistered' };
+    nativeDeliveries.push(m);
+    return { ok: true };
+  });
+const channels: PushChannels = { web: sender, native: nativeSender };
 
 async function reader(
   email: string,
-  options: { topics?: string[]; locale?: 'bg' | 'en'; pushUrgent?: boolean; device?: boolean } = {},
+  options: {
+    topics?: string[];
+    locale?: 'bg' | 'en';
+    pushUrgent?: boolean;
+    device?: boolean;
+    app?: boolean;
+  } = {},
 ) {
   const [user] = await db
     .insert(users)
@@ -40,6 +69,12 @@ async function reader(
     await savePushSubscription(db, user!.id, {
       endpoint: `https://push.example/${email}`,
       keys: { p256dh: 'p256dh-key-value', auth: 'auth-key' },
+    });
+  }
+  if (options.app) {
+    await saveDeviceToken(db, user!.id, {
+      token: `ExponentPushToken[${email.replace(/[^a-z]/g, '')}]`,
+      platform: 'android',
     });
   }
   return user!;
@@ -66,6 +101,7 @@ afterAll(async () => {
 });
 beforeEach(() => {
   deliveries.length = 0;
+  nativeDeliveries.length = 0;
 });
 
 describe('breaking-news push', () => {
@@ -75,6 +111,7 @@ describe('breaking-news push', () => {
     const everything = await reader('all@example.bg');
     await reader('muted@example.bg', { pushUrgent: false });
     await reader('nodevice@example.bg', { device: false });
+    const appOnly = await reader('app@example.bg', { device: false, app: true, locale: 'en' });
     const editor = (
       await db.insert(users).values({ email: 'ed@example.bg', role: 'editor' }).returning()
     )[0]!;
@@ -87,14 +124,14 @@ describe('breaking-news push', () => {
         en: { title: 'Major network outage', tldr: 'Thousands offline.' },
       },
     });
-    expect(await sendUrgentPush(db, sender, article.id)).toMatchObject({
+    expect(await sendUrgentPush(db, channels, article.id)).toMatchObject({
       recipients: 0,
       reason: expect.stringContaining('not'),
     });
 
     await approveUrgent(db, article.id, editor.id);
-    const result = await sendUrgentPush(db, sender, article.id);
-    expect(result).toMatchObject({ recipients: 2, sent: 2 });
+    const result = await sendUrgentPush(db, channels, article.id);
+    expect(result).toMatchObject({ recipients: 3, sent: 3 });
     const byEndpoint = Object.fromEntries(deliveries.map((d) => [d.endpoint, d]));
     expect(byEndpoint[`https://push.example/${techFan.email}`]!.payload).toMatchObject({
       title: 'Breaking: Major network outage',
@@ -105,13 +142,25 @@ describe('breaking-news push', () => {
       'Извънредно: Голям срив в мрежата',
     );
     expect(deliveries.every((d) => d.urgency === 'high')).toBe(true);
+    // The app-only reader got a native push that opens the English story.
+    expect(nativeDeliveries).toEqual([
+      expect.objectContaining({
+        token: 'ExponentPushToken[appexamplebg]',
+        title: 'Breaking: Major network outage',
+        urgency: 'high',
+        data: { url: expect.stringMatching(/^\/en\/a\//), tag: `urgent-${article.id}` },
+      }),
+    ]);
+    expect(appOnly.locale).toBe('en');
   });
 
-  it('does nothing without VAPID keys', async () => {
-    expect(await sendUrgentPush(db, null, crypto.randomUUID())).toMatchObject({
-      sent: 0,
-      reason: 'VAPID keys not configured',
-    });
+  it('does nothing without any push channel', async () => {
+    for (const none of [null, { web: null, native: null }]) {
+      expect(await sendUrgentPush(db, none, crypto.randomUUID())).toMatchObject({
+        sent: 0,
+        reason: 'push not configured',
+      });
+    }
   });
 });
 
@@ -122,7 +171,7 @@ describe('pushToUser', () => {
       endpoint: 'https://push.example/gone-device',
       keys: { p256dh: 'p256dh-key-value', auth: 'auth-key' },
     });
-    const result = await pushToUser(db, sender, user, { title: 't', body: 'b', url: '/bg' });
+    const result = await pushToUser(db, channels, user, { title: 't', body: 'b', url: '/bg' });
     expect(result).toEqual({ sent: 1, removed: 1, skipped: false });
     expect(
       await db
@@ -130,6 +179,76 @@ describe('pushToUser', () => {
         .from(pushSubscriptions)
         .where(eq(pushSubscriptions.endpoint, 'https://push.example/gone-device')),
     ).toHaveLength(0);
+  });
+
+  it('delivers to installed apps and drops uninstalled ones', async () => {
+    const user = await reader('phones@example.bg', { device: false, app: true });
+    await saveDeviceToken(db, user.id, { token: 'ExponentPushToken[Gone1]', platform: 'ios' });
+    const result = await pushToUser(db, channels, user, { title: 't', body: 'b', url: '/bg' });
+    expect(result).toEqual({ sent: 1, removed: 1, skipped: false });
+    const left = await db
+      .select({ token: devicePushTokens.token })
+      .from(devicePushTokens)
+      .where(eq(devicePushTokens.userId, user.id));
+    expect(left).toEqual([{ token: 'ExponentPushToken[phonesexamplebg]' }]);
+  });
+});
+
+describe('Expo push sender', () => {
+  const config = (extra: Record<string, string> = {}) =>
+    envSchema.parse({ APP_ENV: 'development', ...extra });
+
+  it('maps tickets to results, flags DeviceNotRegistered and sends the access token', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const fakeFetch = (async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return new Response(
+        JSON.stringify({
+          data: [
+            { status: 'ok', id: 'a' },
+            { status: 'error', message: 'x', details: { error: 'DeviceNotRegistered' } },
+            {
+              status: 'error',
+              message: 'Rate exceeded',
+              details: { error: 'MessageRateExceeded' },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+    const send = createExpoPushSender(config({ EXPO_ACCESS_TOKEN: 'expo-secret' }), fakeFetch)!;
+    const message = (token: string): NativePushMessage => ({
+      token,
+      title: 'T',
+      body: 'B',
+      data: { url: '/bg' },
+      urgency: 'high',
+    });
+    const results = await send([message('t1'), message('t2'), message('t3')]);
+    expect(results).toEqual([
+      { ok: true },
+      { ok: false, unregistered: true, error: 'DeviceNotRegistered' },
+      { ok: false, unregistered: false, error: 'MessageRateExceeded' },
+    ]);
+    expect(calls[0]!.url).toBe('https://exp.host/--/api/v2/push/send');
+    expect((calls[0]!.init.headers as Record<string, string>).Authorization).toBe(
+      'Bearer expo-secret',
+    );
+    const body = JSON.parse(String(calls[0]!.init.body));
+    expect(body[0]).toMatchObject({ to: 't1', priority: 'high', channelId: 'breaking' });
+  });
+
+  it('reports every message as failed (not unregistered) when Expo is down', async () => {
+    const down = (async () => new Response('', { status: 503 })) as unknown as typeof fetch;
+    const send = createExpoPushSender(config(), down)!;
+    expect(
+      await send([{ token: 't', title: 'T', body: 'B', data: { url: '/' }, urgency: 'normal' }]),
+    ).toEqual([{ ok: false, unregistered: false, error: 'Expo push HTTP 503' }]);
+  });
+
+  it('can be switched off', () => {
+    expect(createExpoPushSender(config({ NATIVE_PUSH_ENABLED: 'false' }))).toBeNull();
   });
 });
 
@@ -168,7 +287,7 @@ describe('daily briefing', () => {
       publishedAt: new Date(Date.now() - 3 * 86_400_000),
       texts: { bg: { title: 'Стара новина' } },
     });
-    const result = await sendDigest(db, sender, subscriber!.id);
+    const result = await sendDigest(db, channels, subscriber!.id);
     expect(result).toMatchObject({ sent: true, channels: ['email'] });
     expect(outbox[0]!.to).toBe('digest@example.bg');
     expect(outbox[0]!.subject).toMatch(/^Вашият дневен бюлетин/);

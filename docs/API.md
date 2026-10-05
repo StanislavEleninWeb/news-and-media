@@ -32,6 +32,9 @@ them. The API never calls an AI model at request time — it only reads PostgreS
 | GET | `/api/v1/push/vapid-public-key` | – | Public VAPID key (or `null` when push is not configured) |
 | POST | `/api/v1/push/subscriptions` | session | Register this device's push subscription (https endpoints only) |
 | DELETE | `/api/v1/push/subscriptions` `{endpoint}` | session | Remove this device |
+| POST | `/api/v1/auth/token` `{email, password}` | – | Mobile sign-in: `{token, expiresAt, user}` (no cookie). Use `Authorization: Bearer <token>` |
+| POST | `/api/v1/push/devices` `{token, platform}` | session | Register the app's Expo push token (`ios`/`android`) |
+| DELETE | `/api/v1/push/devices` `{token}` | session | Remove it (sign-out, push off) |
 | POST | `/api/v1/ads/:id/impression` | consent | Impression beacon (counted only with `nm_consent=all`) |
 | GET | `/api/v1/ads/:id/click` | – | Redirect to the ad's stored URL; counts the click only with consent |
 | GET | `/api/health` | – | 200 when database (and search, if configured) are reachable; 503 otherwise |
@@ -47,3 +50,10 @@ Conventions:
 * State-changing requests must come from the site itself (Origin/Referer check) — CSRF protection
   for the cookie-based session. Anonymous reactions use a random `nm_aid` cookie.
 * Simple per-IP rate limits apply to search, reactions and view beacons.
+
+### Authentication for native clients
+
+Every endpoint marked *session* also accepts `Authorization: Bearer <token>` from
+`/api/v1/auth/token`; when the header is present, cookies are ignored. `POST /api/v1/auth/logout`
+with the bearer header ends that session. Anonymous native clients may send a stable UUID in
+`X-NM-Anon-Id` for reactions.

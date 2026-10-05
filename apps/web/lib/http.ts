@@ -62,13 +62,26 @@ export async function parseBody<T extends z.ZodTypeAny>(
   return result.data;
 }
 
+/** The token of an `Authorization: Bearer …` header (mobile app sessions). */
+export function bearerToken(request: Request): string | null {
+  const header = request.headers.get('authorization');
+  const match = header?.match(/^Bearer\s+([A-Za-z0-9_-]{20,100})$/);
+  return match ? match[1]! : null;
+}
+
 /**
  * CSRF protection for cookie-authenticated, state-changing requests: the
  * browser's Origin (or Referer) must be this site. Combined with SameSite=Lax
  * cookies this blocks cross-site form posts and fetches.
+ *
+ * Native clients (the mobile app) send neither cookies nor an Origin header;
+ * they authenticate with a bearer token that a browser never attaches on its
+ * own, so such requests cannot ride on a victim's ambient credentials.
+ * Browsers always send Origin on cross-site writes, so those are still checked.
  */
 export function rejectCrossSite(request: Request): Response | null {
   const origin = request.headers.get('origin') ?? request.headers.get('referer');
+  if (!origin && !request.headers.get('cookie')) return null;
   if (!origin) return problem(403, 'origin_required');
   let originHost: string;
   try {

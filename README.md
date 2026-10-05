@@ -11,6 +11,8 @@ deployment: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), operations: [docs/RUNBOOK.
 ```
 apps/web       Next.js — public site, /api, /admin
 apps/worker    background jobs and operator CLI
+apps/mobile    Expo / React Native app (iOS + Android) — see apps/mobile/README.md
+packages/contracts  /api/v1 zod schemas shared by web, server and mobile
 packages/core  configuration, logging, shared services
 packages/db    Drizzle schema, SQL migrations, seed data
 infra/         compose files, Caddy edge, VPS bootstrap, deploy script

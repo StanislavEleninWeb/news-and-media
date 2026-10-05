@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nm/contracts": "workspace:*",
     "@nm/core": "workspace:*",
     "@nm/db": "workspace:*",
     "@nm/services": "workspace:*",

@@ -1,0 +1,56 @@
+name: Mobile builds (EAS)
+
+# Native builds run on Expo's EAS servers (macOS for iOS). This workflow only
+# queues them: develop → "staging" (internal testers), main → "production".
+# Store submission stays manual: `eas submit --profile production` after review.
+on:
+  push:
+    branches: [develop, main]
+    paths: ['apps/mobile/**', 'packages/contracts/**', 'pnpm-lock.yaml']
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile
+        type: choice
+        options: [development, development-device, staging, production]
+        default: staging
+
+concurrency:
+  group: eas-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: EAS build
+    runs-on: ubuntu-latest
+    env:
+      PROFILE: ${{ inputs.profile || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+      HAS_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
+    steps:
+      - name: Skip without EXPO_TOKEN
+        if: env.HAS_TOKEN != 'true'
+        run: echo "::notice::EXPO_TOKEN secret not set — EAS build skipped (see apps/mobile/README.md)."
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.HAS_TOKEN == 'true'
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        if: env.HAS_TOKEN == 'true'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: env.HAS_TOKEN == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: expo/expo-github-action@eab7a230208c952974db8c3245cfd78402c7b385 # v9
+        if: env.HAS_TOKEN == 'true'
+        with:
+          eas-version: 24.10.0
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: env.HAS_TOKEN == 'true'
+      - name: Queue build (${{ env.PROFILE }})
+        if: env.HAS_TOKEN == 'true'
+        working-directory: apps/mobile
+        run: eas build --profile "$PROFILE" --platform all --non-interactive --no-wait

@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/coverage/**',
       'apps/web/next-env.d.ts',
       'packages/db/migrations/**',
+      'apps/mobile/.expo/**',
+      'apps/mobile/expo-env.d.ts',
     ],
   },
   js.configs.recommended,
@@ -43,5 +45,13 @@ export default tseslint.config(
   {
     files: ['apps/web/public/**/*.js'],
     languageOptions: { globals: { ...globals.serviceworker, ...globals.browser } },
+  },
+  {
+    files: ['apps/mobile/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
   },
 );

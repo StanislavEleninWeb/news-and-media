@@ -14,8 +14,9 @@ import { createProcessDeps, processArticles, requeueArticles } from '@nm/service
 import { createIngestDeps, ingestSource, runIngestion } from '@nm/services/ingestion/ingest';
 import { sendDigest } from '@nm/services/notifications/fanout';
 import {
-  createWebPushSender,
+  createPushChannels,
   generateVapidKeys,
+  hasPushChannel,
   pushToUser,
 } from '@nm/services/notifications/push';
 import { users } from '@nm/db/schema';
@@ -148,22 +149,23 @@ const commands: Record<string, Command> = {
         .from(users)
         .where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
       if (!user) throw new Error('user not found');
-      console.log(await sendDigest(getDb(), createWebPushSender(), user.id));
+      console.log(await sendDigest(getDb(), createPushChannels(), user.id));
     },
   },
   'test-push': {
-    describe: 'Send a test push to every device of a reader: --email <address>',
+    describe: 'Send a test push to every browser and app of a reader: --email <address>',
     run: async (args) => {
       const [email] = flagValues(args, '--email');
-      const send = createWebPushSender();
-      if (!email || !send) throw new Error('--email is required and VAPID keys must be set');
+      const channels = createPushChannels();
+      if (!email) throw new Error('--email is required');
+      if (!hasPushChannel(channels)) throw new Error('no push channel configured');
       const [user] = await getDb()
         .select()
         .from(users)
         .where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
       if (!user) throw new Error('user not found');
       console.log(
-        await pushToUser(getDb(), send, user, {
+        await pushToUser(getDb(), channels, user, {
           title: 'Test',
           body: 'Push notifications work.',
           url: `/${user.locale}`,
