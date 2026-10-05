@@ -387,6 +387,28 @@ export const pushSubscriptions = pgTable(
   (t) => [index('push_subscriptions_user_idx').on(t.userId)],
 );
 
+export const devicePlatformEnum = pgEnum('device_platform', ['ios', 'android']);
+
+/**
+ * Native app push tokens (Expo push service → FCM on Android, APNs on iOS).
+ * One row per installed app; a token moves to whoever signs in on the device.
+ */
+export const devicePushTokens = pgTable(
+  'device_push_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    token: text('token').notNull().unique(),
+    platform: devicePlatformEnum('platform').notNull(),
+    failureCount: integer('failure_count').notNull().default(0),
+    lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('device_push_tokens_user_idx').on(t.userId)],
+);
+
 // ---------------------------------------------------------------------------
 // Advertising
 // ---------------------------------------------------------------------------

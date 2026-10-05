@@ -31,7 +31,11 @@ www.{$PROD_DOMAIN} {
 {$STAGING_DOMAIN} {
 	import common
 	header X-Robots-Tag "noindex, nofollow"
-	basic_auth {
+	# Browsers log in with basic auth. Internal mobile builds (EAS "development"
+	# and "staging" profiles) send X-Staging-Key instead, because their
+	# Authorization header carries the reader's bearer token.
+	@gated not header X-Staging-Key {$STAGING_APP_KEY}
+	basic_auth @gated {
 		import /etc/caddy/staging_users.caddy
 	}
 	handle_path /media/* {

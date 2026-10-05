@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { getDb } from '@nm/db';
 import { getSessionUser, SESSION_COOKIE, type SessionUser } from '@nm/services/auth/session';
-import { readCookie, serializeCookie } from './http';
+import { bearerToken, readCookie, serializeCookie } from './http';
 
 export const ANON_COOKIE = 'nm_aid';
+/** The mobile app keeps its anonymous id on the device and sends it in this header. */
+export const ANON_HEADER = 'x-nm-anon-id';
 
 export interface Viewer {
   user: SessionUser | null;
@@ -13,8 +15,15 @@ export interface Viewer {
   cookies: string[];
 }
 
+/**
+ * The signed-in reader: a bearer token (mobile app) or the session cookie
+ * (web). When a bearer header is present the cookie is ignored.
+ */
 export async function getUser(request: Request): Promise<SessionUser | null> {
-  return getSessionUser(getDb(), readCookie(request, SESSION_COOKIE));
+  const token = request.headers.has('authorization')
+    ? bearerToken(request)
+    : readCookie(request, SESSION_COOKIE);
+  return getSessionUser(getDb(), token);
 }
 
 export async function getViewer(
@@ -23,7 +32,7 @@ export async function getViewer(
 ): Promise<Viewer> {
   const user = await getUser(request);
   if (user) return { user, actorKey: `u:${user.id}`, cookies: [] };
-  const existing = readCookie(request, ANON_COOKIE);
+  const existing = readCookie(request, ANON_COOKIE) ?? request.headers.get(ANON_HEADER);
   if (existing && /^[0-9a-f-]{36}$/.test(existing))
     return { user: null, actorKey: `a:${existing}`, cookies: [] };
   if (!options.createAnonymousId) return { user: null, actorKey: '', cookies: [] };

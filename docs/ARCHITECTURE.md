@@ -185,9 +185,36 @@ Self-hosted, no third-party notification service:
 * **Daily briefing** — at `DIGEST_HOUR` (default 07:00 `Europe/Sofia`) the production schedule queues one
   `digest` job per opted-in reader (exactly once per day); each gets the top `DIGEST_SIZE` stories of
   the last 24 h from their personalised feed, by e-mail (HTML + text, `List-Unsubscribe`) and/or push.
+* **Native app push** — the mobile app registers an Expo push token (`/api/v1/push/devices`, table
+  `device_push_tokens`). The same `urgent_push` and `digest` jobs fan out to both channels through
+  `PushChannels {web, native}`; native messages go to the Expo push service, which relays them to FCM
+  (Android) and APNs (iOS) using the credentials stored in EAS — the VPS holds no Apple/Google keys.
+  Breaking news uses high priority and the Android `breaking` channel. `DeviceNotRegistered` tickets
+  remove the token. `NATIVE_PUSH_ENABLED=false` switches the channel off; `EXPO_ACCESS_TOKEN` is
+  optional (Expo "enhanced push security").
 * **Safety net** — outside production nothing is delivered except to `NOTIFY_ALLOWLIST`.
 
 Operator commands: `cli send-digest --email <e>`, `cli test-push --email <e>`.
+
+## Mobile app (`apps/mobile`)
+
+Expo SDK 57 / React Native, Expo Router. Screens: feed (topic chips, pull-to-refresh, infinite
+scroll), article (reactions, save, share, original source, corrections, related), topic, search,
+reading list, account (language, sign-in, push toggle). Same design tokens as the website, light and
+dark.
+
+* **Contracts** — the app calls the public `/api/v1` and validates every response with the zod
+  schemas in `packages/contracts`, the same ones the route tests use.
+* **Auth** — `POST /api/v1/auth/token` returns a normal session token, stored in the Keychain /
+  Keystore (`expo-secure-store`) and sent as `Authorization: Bearer`. A bearer header always wins over
+  cookies. The app sends neither cookies nor `Origin`, so CSRF checks pass it through; browser
+  requests with cookies or a cross-site `Origin` are still checked. Anonymous reactions use an install
+  id in `X-NM-Anon-Id`.
+* **Variants** — `APP_VARIANT` = development / staging / production with separate bundle ids, set by the
+  EAS profiles in `eas.json`. Internal builds pass the staging basic-auth gate with `X-Staging-Key`
+  (Caddy `STAGING_APP_KEY`).
+* **CI** — `ci.yml` exports the iOS and Android JS bundles on every PR; `mobile.yml` queues EAS builds
+  (develop → staging, main → production) when `EXPO_TOKEN` is set. Store submission is manual.
 
 ## Ads
 

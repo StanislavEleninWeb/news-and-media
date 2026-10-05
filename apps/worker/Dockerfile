@@ -11,6 +11,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 # Every workspace manifest is needed for pnpm's frozen-lockfile check, even with --filter.
 COPY apps/web/package.json apps/web/
 COPY apps/worker/package.json apps/worker/
+COPY apps/mobile/package.json apps/mobile/
 COPY packages/ packages/
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter "@nm/worker..."

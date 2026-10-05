@@ -120,10 +120,12 @@ describe('reactions', () => {
       params({ id: articleId }),
     );
     expect(crossSite.status).toBe(403);
+    // A browser request carrying cookies must state its origin.
     const noOrigin = await react(
       request(`/api/v1/articles/${articleId}/reaction`, {
         method: 'PUT',
         origin: null,
+        cookie: `nm_aid=${crypto.randomUUID()}`,
         body: '{"reaction":"like"}',
       }),
       params({ id: articleId }),

@@ -107,6 +107,14 @@ export const envSchema = z
     VAPID_PUBLIC_KEY: optionalString,
     VAPID_PRIVATE_KEY: optionalString,
     VAPID_SUBJECT: optionalString,
+    /**
+     * Native app push via the Expo push service, which relays to FCM (Android)
+     * and APNs (iOS) using the credentials uploaded to EAS. On by default; the
+     * access token is optional ("enhanced push security" in the Expo dashboard).
+     */
+    NATIVE_PUSH_ENABLED: booleanFromEnv.default('true'),
+    EXPO_ACCESS_TOKEN: optionalString,
+    EXPO_PUSH_URL: z.string().url().default('https://exp.host/--/api/v2/push/send'),
     /** Daily briefing send time (local hour) and time zone. */
     DIGEST_HOUR: z.coerce.number().int().min(0).max(23).default(7),
     DIGEST_TIMEZONE: z.string().default('Europe/Sofia'),

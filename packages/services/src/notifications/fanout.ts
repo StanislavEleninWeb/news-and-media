@@ -3,6 +3,7 @@ import { getConfig } from '@nm/core/config';
 import type { Db } from '@nm/db';
 import {
   articleTopics,
+  devicePushTokens,
   notificationPreferences,
   pushSubscriptions,
   userTopicPreferences,
@@ -16,15 +17,15 @@ import { enqueueJob } from '../jobs/queue';
 import { sendMail } from '../mail/mailer';
 import { renderDigestEmail } from './digest-email';
 import { getNotificationSettings } from './preferences';
-import { pushToUser, type PushSender } from './push';
+import { hasPushChannel, pushToUser, type PushChannels } from './push';
 
 /**
  * Breaking-news push after an editor approved an article as urgent. Goes to
  * readers who allow urgent pushes and follow one of the article's topics —
  * or follow no topics at all (they have not narrowed their interests).
  */
-export async function sendUrgentPush(db: Db, send: PushSender | null, articleId: string) {
-  if (!send) return { recipients: 0, sent: 0, reason: 'VAPID keys not configured' };
+export async function sendUrgentPush(db: Db, channels: PushChannels | null, articleId: string) {
+  if (!hasPushChannel(channels)) return { recipients: 0, sent: 0, reason: 'push not configured' };
   const bg = await getArticle(db, articleId, 'bg');
   const en = await getArticle(db, articleId, 'en');
   const article = bg ?? en;
@@ -57,13 +58,29 @@ export async function sendUrgentPush(db: Db, send: PushSender | null, articleId:
       .where(eq(userTopicPreferences.userId, users.id)),
   );
 
+  // Readers with at least one browser or app registered for push.
+  const hasDevice = or(
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, users.id)),
+    ),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(devicePushTokens)
+        .where(eq(devicePushTokens.userId, users.id)),
+    ),
+  );
+
   const recipients = await db
-    .selectDistinct({ id: users.id, email: users.email, locale: users.locale })
+    .select({ id: users.id, email: users.email, locale: users.locale })
     .from(users)
-    .innerJoin(pushSubscriptions, eq(pushSubscriptions.userId, users.id))
     .leftJoin(notificationPreferences, eq(notificationPreferences.userId, users.id))
     .where(
       and(
+        hasDevice,
         sql`coalesce(${notificationPreferences.pushUrgent}, true)`,
         or(followsTopic, followsNothing),
       ),
@@ -75,7 +92,7 @@ export async function sendUrgentPush(db: Db, send: PushSender | null, articleId:
     const label = version.locale === 'bg' ? 'Извънредно' : 'Breaking';
     const result = await pushToUser(
       db,
-      send,
+      channels,
       user,
       {
         title: `${label}: ${version.title}`,
@@ -140,7 +157,7 @@ export async function scheduleDigests(db: Db, now = new Date()): Promise<number>
 /** Builds and sends one reader's daily briefing (e-mail and/or push). */
 export async function sendDigest(
   db: Db,
-  send: PushSender | null,
+  push: PushChannels | null,
   userId: string,
   now = new Date(),
 ) {
@@ -185,8 +202,8 @@ export async function sendDigest(
     });
     if (result.delivered) channels.push('email');
   }
-  if (settings.pushDigest && send) {
-    const result = await pushToUser(db, send, user, {
+  if (settings.pushDigest && hasPushChannel(push)) {
+    const result = await pushToUser(db, push, user, {
       title: locale === 'bg' ? 'Вашият дневен бюлетин' : 'Your daily briefing',
       body:
         items[0]!.title +

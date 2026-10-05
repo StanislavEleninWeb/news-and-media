@@ -10,7 +10,7 @@ import { createProcessDeps, processArticles } from '@nm/services/ai/process';
 import { createIngestDeps, runIngestion } from '@nm/services/ingestion/ingest';
 import { runDueJobs, type JobHandlers } from '@nm/services/jobs/queue';
 import { scheduleDigests, sendDigest, sendUrgentPush } from '@nm/services/notifications/fanout';
-import { createWebPushSender } from '@nm/services/notifications/push';
+import { createPushChannels } from '@nm/services/notifications/push';
 import { createAlertTransport, evaluatePipelineHealth, raiseAlert } from '@nm/services/ops/alerts';
 import { writeHeartbeat } from '@nm/services/ops/heartbeat';
 import { createTypesense } from '@nm/services/search/search';
@@ -74,8 +74,9 @@ if (searchIndex) {
   logger.warn('TYPESENSE_URL not set: search uses the PostgreSQL fallback');
 }
 
-const pushSender = createWebPushSender(config);
-if (!pushSender) logger.warn('VAPID keys not set: push notifications are disabled');
+const pushChannels = createPushChannels(config);
+if (!pushChannels.web) logger.warn('VAPID keys not set: browser push is disabled');
+if (!pushChannels.native) logger.warn('NATIVE_PUSH_ENABLED=false: app push is disabled');
 
 // Job queue: "run now" requests from the admin, and notification fan-out.
 // Always on (also in dev), so manual triggers work without automatic schedules.
@@ -99,11 +100,11 @@ const jobHandlers: JobHandlers = {
     if (searchIndex) await rebuildSearchIndex(db, searchIndex);
   },
   urgent_push: async (job) => {
-    const result = await sendUrgentPush(db, pushSender, String(job.payload.articleId));
+    const result = await sendUrgentPush(db, pushChannels, String(job.payload.articleId));
     logger.info({ articleId: job.payload.articleId, ...result }, 'urgent push sent');
   },
   digest: async (job) => {
-    const result = await sendDigest(db, pushSender, String(job.payload.userId));
+    const result = await sendDigest(db, pushChannels, String(job.payload.userId));
     logger.debug({ userId: job.payload.userId, ...result }, 'digest processed');
   },
 };
