@@ -116,8 +116,111 @@ export const adSchema = z.object({
   width: z.number().int(),
   height: z.number().int(),
   advertiser: z.string().nullable(),
+  /** Per-reader daily cap the browser enforces (with consent); null = none. */
+  frequencyCapPerDay: z.number().int().nullable(),
 });
 export type Ad = z.infer<typeof adSchema>;
+
+/**
+ * Creative sizes per placement for the ad server, as [minViewportWidth, sizes]
+ * from widest to narrowest. Every size fits the fixed slot box (no layout shift).
+ */
+export const adSizeMapping: Record<(typeof adPlacements)[number], [number, [number, number][]][]> =
+  {
+    home_top: [
+      [
+        1000,
+        [
+          [970, 90],
+          [728, 90],
+        ],
+      ],
+      [740, [[728, 90]]],
+      [
+        0,
+        [
+          [320, 100],
+          [320, 50],
+        ],
+      ],
+    ],
+    article_bottom: [
+      [
+        1000,
+        [
+          [970, 90],
+          [728, 90],
+        ],
+      ],
+      [740, [[728, 90]]],
+      [
+        0,
+        [
+          [320, 100],
+          [320, 50],
+        ],
+      ],
+    ],
+    feed_inline: [
+      [740, [[728, 90]]],
+      [
+        0,
+        [
+          [320, 100],
+          [320, 50],
+        ],
+      ],
+    ],
+    article_inline: [
+      [740, [[728, 90]]],
+      [
+        0,
+        [
+          [320, 100],
+          [320, 50],
+        ],
+      ],
+    ],
+    search_inline: [
+      [740, [[728, 90]]],
+      [
+        0,
+        [
+          [320, 100],
+          [320, 50],
+        ],
+      ],
+    ],
+  };
+
+/** GET /api/v1/ads/config — how the browser should fill ad slots (runtime, per environment). */
+export const adServerConfigSchema = z.object({
+  provider: z.enum(['direct', 'gam']),
+  gam: z
+    .object({
+      networkCode: z.string(),
+      adUnitPrefix: z.string(),
+      /** Google CMP (TCF) tag; when absent GPT runs in "limited ads" mode. */
+      cmpScriptUrl: z.string().nullable(),
+    })
+    .nullable(),
+  prebid: z
+    .object({
+      scriptUrl: z.string(),
+      timeoutMs: z.number().int(),
+      bidders: z.record(
+        z.string(),
+        z.array(z.object({ bidder: z.string(), params: z.record(z.string(), z.unknown()) })),
+      ),
+    })
+    .nullable(),
+});
+export type AdServerConfig = z.infer<typeof adServerConfigSchema>;
+
+export const gamAdUnitPath = (
+  gam: { networkCode: string; adUnitPrefix: string },
+  placement: string,
+) => `/${gam.networkCode}/${gam.adUnitPrefix}/${placement}`;
 
 export const articlePath = (locale: string, id: string, slug: string) =>
   `/${locale}/a/${id}/${slug}`;

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getDb } from '@nm/db';
 import { listAds, placementSizes } from '@nm/services/admin/ads';
+import { getAdServerConfig } from '@nm/services/content/ads';
+import { gamAdUnitPath } from '@nm/contracts';
 
 export const metadata = { title: 'Ads' };
 
@@ -8,6 +10,7 @@ const fmt = new Intl.DateTimeFormat('en-GB', { dateStyle: 'short', timeZone: 'Eu
 
 export default async function AdsPage() {
   const ads = await listAds(getDb());
+  const server = getAdServerConfig();
   const now = new Date();
   return (
     <>
@@ -18,8 +21,31 @@ export default async function AdsPage() {
         </Link>
         <span className="hint">
           Direct-sold ads win over house ads in the same placement. Impressions and clicks are
-          counted only for readers who accepted cookies. Programmatic exchanges come in v1.
+          counted only for readers who accepted cookies.
         </span>
+      </div>
+      <div className="panel">
+        {server.provider === 'gam' && server.gam ? (
+          <>
+            <p>
+              <strong>Ad server: Google Ad Manager</strong> (network {server.gam.networkCode}).
+              Campaigns, programmatic demand, frequency caps and reporting are managed in Ad
+              Manager. The creatives below are shown only when Ad Manager returns nothing.
+            </p>
+            <p className="hint">
+              Consent: {server.gam.cmpScriptUrl ? 'Google CMP (TCF)' : 'none — limited ads only'} ·
+              Header bidding: {server.prebid ? 'Prebid on' : 'off'} · Ad units:{' '}
+              {Object.keys(placementSizes)
+                .map((p) => gamAdUnitPath(server.gam!, p))
+                .join(', ')}
+            </p>
+          </>
+        ) : (
+          <p>
+            <strong>Ad server: built-in</strong> — the creatives below are all that is served. Set{' '}
+            <code>ADS_PROVIDER=gam</code> to switch to Google Ad Manager.
+          </p>
+        )}
       </div>
       <div className="table-wrap">
         <table className="data">

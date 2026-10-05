@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { isLocale } from '@/i18n/config';
+import { getAdServerConfig } from '@nm/services/content/ads';
 import { siteName } from '@/lib/site';
 
 export const revalidate = 86_400;
@@ -38,15 +39,32 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const bg = locale === 'bg';
+  const adManager = getAdServerConfig().provider === 'gam';
   return (
     <div className="container article">
       <h1 className="article__title">{bg ? 'Поверителност и бисквитки' : 'Privacy and cookies'}</h1>
       <div className="article__body" style={{ fontFamily: 'var(--sans)', fontSize: '1rem' }}>
         <p>
-          {bg
-            ? `${siteName()} събира минимално количество данни. Нямаме рекламни мрежи, проследяване между сайтове или външни инструменти за анализ.`
-            : `${siteName()} collects as little data as possible. There are no ad networks, cross-site trackers or third-party analytics.`}
+          {adManager
+            ? bg
+              ? `${siteName()} събира минимално количество данни и няма външни инструменти за анализ. Рекламите се показват чрез Google Ad Manager — вижте по-долу.`
+              : `${siteName()} collects as little data as possible and uses no third-party analytics. Ads are served through Google Ad Manager — see below.`
+            : bg
+              ? `${siteName()} събира минимално количество данни. Нямаме рекламни мрежи, проследяване между сайтове или външни инструменти за анализ.`
+              : `${siteName()} collects as little data as possible. There are no ad networks, cross-site trackers or third-party analytics.`}
         </p>
+        {adManager ? (
+          <>
+            <h2 className="section-title" style={{ marginTop: '2rem' }}>
+              {bg ? 'Реклами от Google' : 'Ads from Google'}
+            </h2>
+            <p>
+              {bg
+                ? 'Рекламните места се обслужват от Google Ad Manager и партньорите в рекламния търг. Персонализирани реклами и бисквитки на Google се използват само ако се съгласите в прозореца за поверителност на Google; иначе се показват само „ограничени“ реклами без бисквитки и без профилиране.'
+                : 'Ad slots are served by Google Ad Manager and the partners in its auction. Personalised ads and Google cookies are used only if you agree in Google’s privacy message; otherwise only “limited” ads without cookies or profiling are shown.'}
+            </p>
+          </>
+        ) : null}
         <h2 className="section-title" style={{ marginTop: '2rem' }}>
           {bg ? 'Необходими бисквитки' : 'Necessary cookies'}
         </h2>

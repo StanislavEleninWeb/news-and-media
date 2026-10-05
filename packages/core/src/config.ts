@@ -90,6 +90,60 @@ export const envSchema = z
     CHAT_MAX_PER_HOUR: z.coerce.number().int().min(1).default(20),
     CHAT_MAX_PER_DAY: z.coerce.number().int().min(1).default(60),
 
+    // Advertising -------------------------------------------------------------
+    /**
+     * direct: the built-in direct-sold/house ads (admin → Ads).
+     * gam: Google Ad Manager (direct line items + AdX/PMP programmatic, optional
+     * Prebid header bidding); unfilled slots fall back to the built-in house ads.
+     */
+    ADS_PROVIDER: z.enum(['direct', 'gam']).default('direct'),
+    /** Ad Manager network code (digits) and ad unit prefix: /<code>/<prefix>/<placement>. */
+    GAM_NETWORK_CODE: z
+      .string()
+      .regex(/^\d{4,12}$/, 'digits only')
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    GAM_AD_UNIT_PREFIX: z
+      .string()
+      .regex(/^[A-Za-z0-9_.-]{1,60}$/)
+      .default('news'),
+    /**
+     * Google-certified TCF CMP (Ad Manager → Privacy & messaging) script URL, e.g.
+     * https://fundingchoicesmessages.google.com/i/pub-XXXX?ers=1 — needed for
+     * personalised/programmatic demand in the EEA. Without it ads run as "limited ads".
+     */
+    GAM_CMP_SCRIPT_URL: z
+      .string()
+      .url()
+      .refine((u) => u.startsWith('https://fundingchoicesmessages.google.com/'), 'Google CMP URL')
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
+    /**
+     * Lines for /ads.txt (authorised sellers), separated by "|" — required for
+     * programmatic demand, e.g. "google.com, pub-1234567890, DIRECT, f08c47fec0942fa0".
+     */
+    ADS_TXT: optionalString,
+    /** Self-hosted Prebid.js build (header bidding), e.g. /media/ads/prebid.js. Needs the CMP. */
+    PREBID_SCRIPT_URL: optionalString,
+    PREBID_TIMEOUT_MS: z.coerce.number().int().min(300).max(3000).default(1000),
+    /** JSON: {"<placement>": [{"bidder": "...", "params": {...}}], ...} */
+    PREBID_BIDDERS: z
+      .string()
+      .optional()
+      .transform((value, ctx) => {
+        if (!value?.trim())
+          return {} as Record<string, { bidder: string; params: Record<string, unknown> }[]>;
+        try {
+          return JSON.parse(value) as Record<
+            string,
+            { bidder: string; params: Record<string, unknown> }[]
+          >;
+        } catch {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'PREBID_BIDDERS must be JSON' });
+          return z.NEVER;
+        }
+      }),
+
     // Behavioural personalisation -------------------------------------------
     /** Days of reading signals kept for ranking; older events are deleted. */
     ENGAGEMENT_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(90),
@@ -172,6 +226,13 @@ export const envSchema = z
     isProduction: env.APP_ENV === 'production',
   }))
   .superRefine((env, ctx) => {
+    if (env.ADS_PROVIDER === 'gam' && !env.GAM_NETWORK_CODE) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['GAM_NETWORK_CODE'],
+        message: 'required when ADS_PROVIDER=gam',
+      });
+    }
     if (env.APP_ENV === 'production' || env.APP_ENV === 'staging') {
       if (!env.DATABASE_URL) {
         ctx.addIssue({

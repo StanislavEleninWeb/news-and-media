@@ -458,6 +458,8 @@ export const adSlots = pgTable(
     width: integer('width').notNull(),
     height: integer('height').notNull(),
     weight: integer('weight').notNull().default(1),
+    /** Max impressions per reader per day (applied only for readers who consented); null = no cap. */
+    frequencyCapPerDay: integer('frequency_cap_per_day'),
     startsAt: timestamp('starts_at', { withTimezone: true }),
     endsAt: timestamp('ends_at', { withTimezone: true }),
     isActive: boolean('is_active').notNull().default(true),

@@ -266,6 +266,30 @@ creative arriving — or not — never shifts the content. Creatives load in the
 
 `/<locale>/privacy` explains the cookies in plain language — have it reviewed before launch.
 
+### Ad server (v1): Google Ad Manager
+
+`ADS_PROVIDER=gam` switches every slot to Google Ad Manager at runtime (the browser reads
+`/api/v1/ads/config`, so one image serves both modes). Ad units are
+`/<GAM_NETWORK_CODE>/<GAM_AD_UNIT_PREFIX>/<placement>`, with a responsive size mapping that always
+fits the reserved box (970×90/728×90 desktop, 728×90 tablet, 320×100/320×50 phone — no layout
+shift). Slot and page key-values: `placement`, `locale`, and `topic` on article pages.
+
+* **Demand** — direct-sold line items, AdX open auction and PMP deals are configured in Ad Manager;
+  optional Prebid.js header bidding (self-hosted build at `PREBID_SCRIPT_URL`, bidders per placement in
+  `PREBID_BIDDERS`) runs before each slot fetch with `PREBID_TIMEOUT_MS`. `/ads.txt` comes from `ADS_TXT`.
+* **Fallback** — when Ad Manager returns nothing (`slotRenderEnded.isEmpty`), the slot shows a built-in
+  direct/house creative, so house ads keep filling unsold inventory.
+* **Consent (EEA)** — with `GAM_CMP_SCRIPT_URL` (Google's certified TCF CMP) GPT and Prebid read the TCF
+  string themselves. Without it, GPT loads from the limited-ads host with `limitedAds: true` (no ad
+  cookies, no personalisation, no frequency caps) and Prebid is never loaded.
+* **Frequency capping** — Ad Manager line items: set caps in Ad Manager. Built-in ads:
+  `frequency_cap_per_day` per creative, counted in the reader's browser (`localStorage`, consent only) and
+  enforced by `exclude=` on `/api/v1/ads`.
+* **Reporting** — Ad Manager counts impressions and clicks for its slots; the built-in counters keep
+  counting built-in creatives only.
+* **CSP** — allows Google's ad script hosts, `frame-src https:` and `connect-src https:` (bidders).
+* **Mobile app** — no ads yet (would need the Google Mobile Ads SDK and ATT on iOS).
+
 ## Observability
 
 * Structured JSON logs from every service (`docker compose logs`), secrets redacted.

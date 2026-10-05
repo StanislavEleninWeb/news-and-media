@@ -118,3 +118,40 @@ Any SMTP provider works (`SMTP_URL=smtps://user:pass@host:465`). Outside product
 * **Backups:** add the `backup.sh` cron line from [RUNBOOK.md](RUNBOOK.md#backups-and-restore).
 
 See [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) before the first public release.
+
+## v1 features — what you set up by hand
+
+### Mobile app
+
+See [apps/mobile/README.md](../apps/mobile/README.md): Expo/EAS project, APNs key, Firebase + FCM V1
+key, `STAGING_APP_KEY` in the edge `.env`, GitHub secret `EXPO_TOKEN`. Optional `EXPO_ACCESS_TOKEN` in
+`app.env`.
+
+### "Ask this article"
+
+Create a **separate** Anthropic API key (Console → API keys, ideally in its own workspace with a spend
+limit) and set `CHAT_ANTHROPIC_API_KEY` per environment. Chat stays hidden behind a 503 until it is set.
+Tune `CHAT_MONTHLY_BUDGET_USD`, `CHAT_MAX_PER_HOUR`, `CHAT_MAX_PER_DAY`. Spend shows on the admin
+dashboard ("Reader chat spend").
+
+### Google Ad Manager
+
+1. Ad Manager network (Admin → Global settings → network code) → `GAM_NETWORK_CODE`.
+2. Inventory → Ad units: create `<GAM_AD_UNIT_PREFIX>` with children `home_top`, `feed_inline`,
+   `article_inline`, `article_bottom`, `search_inline` (sizes 970×90, 728×90, 320×100, 320×50).
+3. Privacy & messaging → European regulations message (Google-certified CMP), publish it and put its tag
+   URL in `GAM_CMP_SCRIPT_URL`. Without it, EEA traffic gets limited ads only.
+4. AdX / programmatic: link Ad Exchange, enable open auction and any PMP deals; add the Google line to
+   `ADS_TXT` (`google.com, pub-…, DIRECT, f08c47fec0942fa0`) plus any Prebid sellers.
+5. Optional header bidding: build Prebid.js at prebid.org with your bidder adapters + the
+   `consentManagementTcf` and `gptPreAuction` modules, copy it to
+   `/srv/newsmedia/<env>/data/media/ads/prebid.js`, set `PREBID_SCRIPT_URL=/media/ads/prebid.js` and
+   `PREBID_BIDDERS`. Create the matching Prebid line items/price buckets in Ad Manager (`hb_pb`).
+6. Frequency caps: on each line item (Delivery settings → Frequency).
+7. `ADS_PROVIDER=gam`, restart web. Admin → Ads shows the active ad units.
+
+**Acceptance test** (staging, network in test mode or a real test order): create an order with one
+line item per ad unit (house/sponsorship, a test creative per size), target `placement` key-values or
+the ad units, load the home, an article and search → each slot shows the test creative; Ad Manager →
+Reporting → *Delivery* by ad unit shows impressions and clicks within a few hours. Remove the line
+items to see the built-in house ads take over.

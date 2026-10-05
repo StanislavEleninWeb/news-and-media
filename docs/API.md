@@ -60,3 +60,11 @@ Every endpoint marked *session* also accepts `Authorization: Bearer <token>` fro
 `/api/v1/auth/token`; when the header is present, cookies are ignored. `POST /api/v1/auth/logout`
 with the bearer header ends that session. Anonymous native clients may send a stable UUID in
 `X-NM-Anon-Id` for reactions.
+
+### Ads
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/v1/ads/config` | `{provider: direct\|gam, gam, prebid}` — how the browser fills slots |
+| GET | `/api/v1/ads?placement&locale&exclude=<ids>` | Built-in creative; `exclude` = ads capped in this browser today |
+| GET | `/ads.txt` | Authorised sellers from `ADS_TXT` |
