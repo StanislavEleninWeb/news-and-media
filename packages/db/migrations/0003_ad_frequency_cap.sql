@@ -1,0 +1,1 @@
+ALTER TABLE "ad_slots" ADD COLUMN "frequency_cap_per_day" integer;

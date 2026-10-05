@@ -61,6 +61,17 @@ export function AdForm({ ad }: { ad?: Ad }) {
           />
         </label>
         <label className="field">
+          Frequency cap (per reader per day, optional)
+          <input
+            className="input"
+            name="frequencyCapPerDay"
+            type="number"
+            min={1}
+            max={50}
+            defaultValue={ad?.frequencyCapPerDay ?? ''}
+          />
+        </label>
+        <label className="field">
           Starts (optional)
           <input
             className="input"

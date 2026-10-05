@@ -52,6 +52,11 @@ export const adInputSchema = z
       .refine((u) => /^https?:\/\//.test(u), 'http(s) only'),
     altText: z.string().trim().min(1).max(200),
     weight: z.coerce.number().int().min(1).max(100),
+    frequencyCapPerDay: z
+      .string()
+      .optional()
+      .transform((v) => (v ? Number(v) : null))
+      .pipe(z.number().int().min(1).max(50).nullable()),
     startsAt: optionalDate,
     endsAt: optionalDate,
     isActive: z.boolean(),

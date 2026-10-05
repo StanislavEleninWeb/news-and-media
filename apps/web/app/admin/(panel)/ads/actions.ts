@@ -31,6 +31,7 @@ export async function saveAdAction(_prev: ActionState, form: FormData): Promise<
       targetUrl: str(form, 'targetUrl'),
       altText: str(form, 'altText'),
       weight: str(form, 'weight') || '1',
+      frequencyCapPerDay: str(form, 'frequencyCapPerDay'),
       startsAt: str(form, 'startsAt'),
       endsAt: str(form, 'endsAt'),
       isActive: form.get('isActive') === 'on',

@@ -8,17 +8,32 @@ const rootEnv = path.resolve(process.cwd(), '../../.env');
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 /**
+ * Google Ad Manager / Google CMP hosts. The CSP is fixed at build time and the
+ * same image runs everywhere, so they are always allowed; scripts are only
+ * loaded when ADS_PROVIDER=gam. Prebid.js is self-hosted (/media/ads/).
+ */
+const adScriptHosts = [
+  'https://securepubads.g.doubleclick.net',
+  'https://pagead2.googlesyndication.com',
+  'https://tpc.googlesyndication.com',
+  'https://fundingchoicesmessages.google.com',
+  'https://www.googletagservices.com',
+];
+
+/**
  * Content-Security-Policy (production builds). Inline scripts are allowed because
- * Next.js and the pre-paint preferences script inject them; everything else is
- * restricted to this origin. Ad creatives may come from https image URLs.
+ * Next.js and the pre-paint preferences script inject them; scripts otherwise
+ * come from this origin or Google's ad stack. Ad creatives (images, iframes) and
+ * header-bidding requests may use any https origin.
  */
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline' ${adScriptHosts.join(' ')}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https:",
+  'frame-src https:',
   "worker-src 'self'",
   "manifest-src 'self'",
   "frame-ancestors 'none'",

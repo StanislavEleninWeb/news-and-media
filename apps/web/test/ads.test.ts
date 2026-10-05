@@ -77,3 +77,41 @@ describe('ad measurement respects consent', () => {
     ).toBe(404);
   });
 });
+
+describe('ad serving API', () => {
+  it('honours the frequency-cap exclude list and validates it', async () => {
+    const { GET: pick } = await import('@/app/api/v1/ads/route');
+    const shown = await (await pick(request('/api/v1/ads?placement=feed_inline&locale=bg'))).json();
+    expect(shown.ad.id).toBe(adId);
+    const capped = await (
+      await pick(request(`/api/v1/ads?placement=feed_inline&locale=bg&exclude=${adId}`))
+    ).json();
+    expect(capped.ad).toBeNull();
+    expect(
+      (await pick(request('/api/v1/ads?placement=feed_inline&locale=bg&exclude=nope'))).status,
+    ).toBe(400);
+  });
+
+  it('serves the runtime ad server config', async () => {
+    const { GET: config } = await import('@/app/api/v1/ads/config/route');
+    expect(await config().json()).toEqual({ provider: 'direct', gam: null, prebid: null });
+  });
+});
+
+describe('/ads.txt', () => {
+  it('lists the configured sellers', async () => {
+    const { resetConfig } = await import('@nm/core/config');
+    const { GET: adsTxt } = await import('@/app/ads.txt/route');
+    process.env.ADS_TXT =
+      'google.com, pub-123, DIRECT, f08c47fec0942fa0 | example.com, 9, RESELLER';
+    resetConfig();
+    try {
+      expect(await adsTxt().text()).toBe(
+        'google.com, pub-123, DIRECT, f08c47fec0942fa0\nexample.com, 9, RESELLER\n',
+      );
+    } finally {
+      delete process.env.ADS_TXT;
+      resetConfig();
+    }
+  });
+});

@@ -67,6 +67,7 @@ export default async function ArticlePage({ params }: Props) {
 
   const t = getMessages(locale);
   const topic = article.topics[0];
+  const adTargeting = topic ? { topic: topic.slug } : undefined;
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
@@ -171,7 +172,7 @@ export default async function ArticlePage({ params }: Props) {
             <Fragment key={index}>
               <p>{paragraph}</p>
               {index === 2 && article.body.length > 4 ? (
-                <AdSlot placement="article_inline" locale={locale} />
+                <AdSlot placement="article_inline" locale={locale} targeting={adTargeting} />
               ) : null}
             </Fragment>
           ))}
@@ -186,7 +187,7 @@ export default async function ArticlePage({ params }: Props) {
         </div>
 
         <div className="article__footer">
-          <AdSlot placement="article_bottom" locale={locale} />
+          <AdSlot placement="article_bottom" locale={locale} targeting={adTargeting} />
           {article.related.length ? (
             <section>
               <h2 className="section-title">{t.article.related}</h2>

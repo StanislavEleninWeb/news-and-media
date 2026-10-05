@@ -8,7 +8,16 @@ export type AdPlacement =
  * Fixed-size ad space. The box keeps its size whether or not a creative
  * arrives, so ads never shift the content (CLS). Creatives load in the browser.
  */
-export function AdSlot({ placement, locale }: { placement: AdPlacement; locale: Locale }) {
+export function AdSlot({
+  placement,
+  locale,
+  targeting,
+}: {
+  placement: AdPlacement;
+  locale: Locale;
+  /** Key-values for the ad server, e.g. {topic: 'sport'}. */
+  targeting?: Record<string, string>;
+}) {
   return (
     <div className="ad-row" data-lite-hide="">
       <div className={`ad-slot ad-slot--${placement}`} data-placement={placement}>
@@ -16,6 +25,7 @@ export function AdSlot({ placement, locale }: { placement: AdPlacement; locale: 
           placement={placement}
           locale={locale}
           label={locale === 'bg' ? 'Реклама' : 'Advertisement'}
+          targeting={targeting}
         />
       </div>
     </div>

@@ -19,8 +19,16 @@ export function writeConsent(value: Consent | null): void {
       ? `${CONSENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
       : `${CONSENT_COOKIE}=${value}; Path=/; Max-Age=${180 * 86_400}; SameSite=Lax${secure}`;
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: value }));
-  // Withdrawing consent deletes the reading history kept for personalisation.
-  if (value !== 'all') void fetch('/api/v1/events', { method: 'DELETE' }).catch(() => undefined);
+  // Withdrawing consent deletes the reading history kept for personalisation
+  // and the ad frequency counters kept in this browser.
+  if (value !== 'all') {
+    void fetch('/api/v1/events', { method: 'DELETE' }).catch(() => undefined);
+    try {
+      localStorage.removeItem('nm_adfreq');
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export function hasAdConsent(cookieHeader: string | null): boolean {
